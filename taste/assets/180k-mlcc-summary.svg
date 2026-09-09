@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="720" viewBox="0 0 1120 720">
+<rect width="1120" height="720" fill="#fbfbf8"/>
+<rect x="36" y="36" width="1048" height="648" rx="28" fill="#ffffff" stroke="#e8e4dc" stroke-width="2"/>
+<rect x="36" y="36" width="1048" height="12" rx="6" fill="#1e5e7a"/>
+<text x="70" y="82" font-family="Inter, PingFang SC, Arial, sans-serif" font-size="24" font-weight="700" fill="#1e5e7a">JPM + GS / SUMMARY IMAGE</text>
+<text x="70" y="140" font-family="Noto Serif SC, PingFang SC, serif" font-size="42" font-weight="900" fill="#151515">MLCC: AI 服务器拉动的多年供需缺口</text>
+<circle cx="76" cy="199" r="6" fill="#1e5e7a"/>
+<text x="96" y="208" font-family="Inter, PingFang SC, Arial, sans-serif" font-size="28" font-weight="700" fill="#262626">JPM 预计 MLCC 从 2025 年约 10% 过剩转向 2028 年约 6%</text>
+<text x="96" y="247" font-family="Inter, PingFang SC, Arial, sans-serif" font-size="28" font-weight="500" fill="#262626">短缺。</text>
+<circle cx="76" cy="295" r="6" fill="#1e5e7a"/>
+<text x="96" y="304" font-family="Inter, PingFang SC, Arial, sans-serif" font-size="28" font-weight="700" fill="#262626">服务器计算和汽车需求抬升产品 mix；高规格 AI server MLCC</text>
+<text x="96" y="343" font-family="Inter, PingFang SC, Arial, sans-serif" font-size="28" font-weight="500" fill="#262626">良率更低，实际有效产能被吃掉。</text>
+<circle cx="76" cy="391" r="6" fill="#1e5e7a"/>
+<text x="96" y="400" font-family="Inter, PingFang SC, Arial, sans-serif" font-size="28" font-weight="700" fill="#262626">JPM 偏好日本/台湾供应商胜过韩国；GS 数据显示 4 月 MLCC 出口 ASP</text>
+<text x="96" y="439" font-family="Inter, PingFang SC, Arial, sans-serif" font-size="28" font-weight="500" fill="#262626">+3% MoM、量 +7% MoM。</text>
+<text x="70" y="652" font-family="JetBrains Mono, Menlo, monospace" font-size="18" fill="#a7a7a7">my-taste / 180K Research / 2026-06-16</text>
+</svg>

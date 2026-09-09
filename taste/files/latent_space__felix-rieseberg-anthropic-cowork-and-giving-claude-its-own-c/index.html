@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>为什么 AI 该有自己的电脑：Anthropic Cowork 拆解</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- 自绘流程图渲染器(见 renderFlowcharts):读 .mermaid 里的 flowchart 源码,
+     解析→分层布局→卡片+SVG 箭头。不再加载 mermaid CDN(更好看 + 去掉 loose XSS 面)。 -->
+<style>
+  /* ====== Claude-inspired design tokens (与 ai-podcast-listener 同族) ====== */
+  :root {
+    --bg: #fafaf7;
+    --bg-card: #ffffff;
+    --fg: #1c1917;
+    --fg-secondary: #44403c;
+    --muted: #78716c;
+    --muted-soft: #a8a29e;
+    --accent: #B45309;
+    --accent-bg: #fef3c7;
+    --border: #e7e5e4;
+    --border-soft: #f5f5f4;
+    --green: #15803d;
+    --red: #dc2626;
+    --yellow: #ca8a04;
+    --serif: 'Charter', 'Iowan Old Style', 'PingFang SC', 'Noto Serif SC', Georgia, serif;
+    --sans: ui-sans-serif, system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  }
+  html.dark {
+    --bg: #0c0a09;
+    --bg-card: #1c1917;
+    --fg: #f5f5f4;
+    --fg-secondary: #d6d3d1;
+    --muted: #a8a29e;
+    --muted-soft: #78716c;
+    --accent: #fbbf24;
+    --accent-bg: #422006;
+    --border: #292524;
+    --border-soft: #1c1917;
+    --green: #4ade80;
+    --red: #f87171;
+    --yellow: #facc15;
+  }
+  html, body { background: var(--bg); color: var(--fg); }
+  body {
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.75;
+    font-feature-settings: "kern", "liga", "calt";
+  }
+  .ui { font-family: var(--sans); }
+  .mono { font-family: var(--mono); font-feature-settings: "tnum"; }
+  .text-muted { color: var(--muted); }
+  .accent { color: var(--accent); }
+
+  /* Hero */
+  .hero-title { font-family: var(--serif); font-weight: 600; letter-spacing: -0.01em; line-height: 1.25; }
+
+  .badge {
+    font-family: var(--sans); font-size: 11px; font-weight: 600;
+    letter-spacing: 0.04em; text-transform: uppercase;
+    padding: 4px 10px; border-radius: 4px; display: inline-block;
+  }
+  .mode-badge { background: var(--accent-bg); color: var(--accent); }
+
+  .section-heading {
+    font-family: var(--sans); font-size: 13px; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+    border-top: 1px solid var(--border);
+    padding-top: 24px; margin-top: 56px; margin-bottom: 24px;
+    display: flex; align-items: baseline; gap: 8px;
+  }
+  .section-heading .num { color: var(--accent); font-weight: 700; margin-right: 4px; }
+  .section-subhead {
+    font-family: var(--sans); font-size: 14px; color: var(--muted);
+    margin-top: -16px; margin-bottom: 24px; font-style: italic;
+  }
+
+  /* TLDR */
+  .tldr-block {
+    font-family: var(--serif); font-size: 24px; line-height: 1.5;
+    padding: 24px 0 16px;
+    border-top: 2px solid var(--fg);
+  }
+  .worth-row {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px;
+    padding: 12px 0 20px; border-bottom: 1px solid var(--border);
+    font-family: var(--sans); font-size: 14px; color: var(--fg-secondary);
+  }
+
+  /* Narrative (导读故事) */
+  .narrative-block { font-family: var(--serif); font-size: 17.5px; line-height: 1.9; }
+  .narrative-block p { margin-bottom: 1.1em; }
+  .narrative-block p:first-of-type::first-letter {
+    font-size: 2.6em; line-height: 1; float: left; padding-right: 8px; margin-top: 2px;
+    color: var(--accent); font-weight: 600;
+  }
+
+  /* The one insight (带走一句) */
+  .insight-hero {
+    margin: 8px 0 16px; padding: 36px 40px; border-radius: 14px;
+    background: var(--accent-bg); position: relative;
+  }
+  .insight-hero .itext {
+    font-family: var(--serif); font-size: 27px; line-height: 1.5; font-weight: 600; color: var(--fg);
+  }
+  .insight-hero .ilabel {
+    font-family: var(--sans); font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 12px;
+  }
+
+  /* Key numbers */
+  .kn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+  .kn-card {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 18px 20px 14px;
+  }
+  .kn-metric { font-family: var(--sans); font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0.03em; margin-bottom: 6px; }
+  .kn-value { font-family: var(--mono); font-size: 26px; font-weight: 700; line-height: 1.2; color: var(--fg); }
+  .kn-value.kn-md { font-size: 19px; }
+  .kn-value.kn-sm { font-size: 15.5px; line-height: 1.45; }
+  .kn-context { font-family: var(--sans); font-size: 12.5px; line-height: 1.55; color: var(--fg-secondary); margin-top: 8px; }
+  .kn-page { font-family: var(--mono); font-size: 10.5px; color: var(--muted-soft); margin-top: 8px; }
+
+  /* Question card */
+  .question-card {
+    border-left: 3px solid var(--accent); padding: 20px 24px; margin-bottom: 32px;
+    background: var(--bg-card); border-radius: 0 8px 8px 0;
+  }
+  .question-num {
+    font-family: var(--sans); font-size: 12px; font-weight: 600; letter-spacing: 0.1em;
+    color: var(--accent); text-transform: uppercase; margin-bottom: 8px; display: block;
+  }
+  .question-text { font-family: var(--serif); font-size: 20px; font-weight: 600; line-height: 1.4; margin-bottom: 16px; }
+  .question-approach, .question-answer {
+    font-size: 15px; line-height: 1.7; padding: 12px 16px; border-radius: 6px; margin-top: 12px;
+  }
+  .question-approach { background: var(--border-soft); color: var(--fg-secondary); }
+  .question-answer { background: var(--accent-bg); }
+  .label-pill {
+    font-family: var(--sans); font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--accent); display: block; margin-bottom: 6px;
+  }
+
+  /* Premise rows */
+  .premise { border-left: 2px solid var(--border); padding: 4px 0 4px 20px; margin-bottom: 24px; transition: border-color .2s; }
+  .premise:hover { border-left-color: var(--accent); }
+  .premise-point { font-family: var(--serif); font-weight: 600; font-size: 17px; line-height: 1.4; margin-bottom: 8px; }
+  .premise-explanation { font-size: 15px; line-height: 1.7; color: var(--fg-secondary); }
+  .page-ref { font-family: var(--mono); font-size: 11px; color: var(--muted-soft); margin-left: 8px; white-space: nowrap; }
+
+  /* Mermaid */
+  .mental-block { margin-bottom: 56px; }
+  .mental-name { font-family: var(--serif); font-size: 22px; font-weight: 600; line-height: 1.3; margin-bottom: 10px; }
+  .mental-description { font-size: 15px; line-height: 1.7; color: var(--fg-secondary); margin-bottom: 20px; }
+  .mermaid-frame {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 28px 20px; margin: 16px 0; display: flex; justify-content: center; overflow-x: auto;
+  }
+  .mermaid-frame .mermaid { max-width: 100%; }
+  .mermaid-caption { font-family: var(--sans); font-size: 12px; color: var(--muted); text-align: center; margin-top: 8px; font-style: italic; }
+  .application-callout { background: var(--accent-bg); border-radius: 8px; padding: 16px 20px; margin-top: 16px; }
+  .application-callout .label {
+    font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 6px;
+  }
+
+  /* Tables */
+  .data-table { width: 100%; border-collapse: collapse; font-family: var(--sans); font-size: 14px; }
+  .data-table th {
+    text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--muted); padding: 8px 12px;
+    border-bottom: 2px solid var(--border);
+  }
+  .data-table td { padding: 10px 12px; border-bottom: 1px solid var(--border-soft); vertical-align: top; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table .num { font-family: var(--mono); white-space: nowrap; }
+  .pos { color: var(--green); } .neg { color: var(--red); }
+
+  /* Rating box (broker research) */
+  .rating-box {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 24px 28px; display: flex; flex-wrap: wrap; gap: 32px; align-items: center;
+  }
+  .rating-item .rlabel { font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .rating-item .rvalue { font-family: var(--serif); font-size: 26px; font-weight: 700; line-height: 1.1; }
+  .rating-item .rvalue.mono { font-family: var(--mono); }
+
+  /* Callout boxes */
+  .warn-box { margin-top: 20px; padding: 16px 20px; border-radius: 8px;
+    background: color-mix(in srgb, #f87171 10%, transparent); border-left: 3px solid var(--red); }
+  .warn-box .label { font-family: var(--sans); font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--red); margin-bottom: 8px; }
+  .warn-box .body { font-size: 14.5px; line-height: 1.7; color: var(--fg-secondary); }
+  .warn-box ul { padding-left: 18px; font-size: 14.5px; line-height: 1.7; color: var(--fg-secondary); }
+  .info-box { margin-top: 20px; padding: 16px 20px; border-radius: 8px;
+    background: var(--border-soft); border-left: 3px solid var(--muted); }
+  .info-box .label { font-family: var(--sans); font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+
+  /* Evidence / assumption cards */
+  .evidence-card {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 18px 22px; margin-bottom: 16px;
+  }
+  .evidence-claim { font-family: var(--serif); font-weight: 600; font-size: 16.5px; line-height: 1.45; }
+  .evidence-detail { font-size: 14px; line-height: 1.65; color: var(--fg-secondary); margin-top: 8px; }
+  .strength-badge { font-family: var(--sans); font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+    text-transform: uppercase; padding: 2px 8px; border-radius: 3px; margin-left: 8px; vertical-align: 2px; }
+  .strength-strong { background: color-mix(in srgb, var(--green) 15%, transparent); color: var(--green); }
+  .strength-moderate { background: color-mix(in srgb, var(--yellow) 18%, transparent); color: var(--yellow); }
+  .strength-weak { background: color-mix(in srgb, var(--red) 14%, transparent); color: var(--red); }
+
+  /* Reading map */
+  .rmap-item { display: flex; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--border-soft); align-items: baseline; }
+  .rmap-item:last-child { border-bottom: none; }
+  .rmap-pages { font-family: var(--mono); font-size: 12px; color: var(--muted); min-width: 76px; flex-shrink: 0; }
+  .rmap-verdict { font-family: var(--sans); font-size: 10px; font-weight: 700; letter-spacing: 0.05em;
+    text-transform: uppercase; padding: 2px 8px; border-radius: 3px; flex-shrink: 0; min-width: 44px; text-align: center; }
+  .v-deep { background: var(--accent); color: #fff; }
+  html.dark .v-deep { color: #1c1917; }
+  .v-skim { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+  .v-skip { background: var(--border-soft); color: var(--muted-soft); }
+  .rmap-body .rmap-section { font-family: var(--serif); font-weight: 600; font-size: 15.5px; }
+  .rmap-body .rmap-summary { font-size: 13.5px; color: var(--fg-secondary); font-family: var(--sans); margin-top: 2px; }
+  .rmap-body .rmap-why { font-size: 12px; color: var(--muted); font-family: var(--sans); font-style: italic; }
+
+  /* Fine print severity */
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 10px; flex-shrink: 0; margin-top: 9px; }
+  .dot-red { background: var(--red); } .dot-yellow { background: var(--yellow); } .dot-info { background: var(--muted-soft); }
+
+  /* Critical lens */
+  .lens-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 720px) { .lens-grid { grid-template-columns: 1fr; } }
+  .lens-col { border-radius: 10px; padding: 20px 24px; background: var(--bg-card); border: 1px solid var(--border); }
+  .lens-col .ltitle { font-family: var(--sans); font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 12px; }
+  .lens-col ul { padding-left: 18px; font-size: 14.5px; line-height: 1.7; color: var(--fg-secondary); }
+  .lens-col li { margin-bottom: 8px; }
+
+  /* Playbook steps */
+  .playbook-block { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 28px; margin-bottom: 32px; }
+  .playbook-name { font-family: var(--serif); font-size: 20px; font-weight: 600; margin-bottom: 6px; }
+  .playbook-when { font-family: var(--sans); font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+  .step-list { counter-reset: step; }
+  .step-item { position: relative; padding-left: 48px; padding-bottom: 20px; counter-increment: step; }
+  .step-item:not(:last-child)::after { content: ""; position: absolute; left: 17px; top: 36px; bottom: 0; width: 2px; background: var(--border); }
+  .step-item::before {
+    content: counter(step); position: absolute; left: 0; top: 0; width: 36px; height: 36px;
+    border-radius: 50%; background: var(--accent-bg); color: var(--accent);
+    font-family: var(--sans); font-weight: 700; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .step-title { font-family: var(--serif); font-weight: 600; font-size: 16px; margin-bottom: 6px; }
+  .step-detail { font-size: 14px; line-height: 1.7; color: var(--fg-secondary); }
+
+  /* Quick start / checklist */
+  .quickstart-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-soft); font-size: 15px; line-height: 1.6; }
+  .quickstart-item:last-child { border-bottom: none; }
+  .quickstart-item .check { color: var(--accent); font-size: 18px; line-height: 1.4; flex-shrink: 0; }
+
+  /* Pull quote */
+  .pullquote { margin: 32px 0; padding: 8px 0 8px 32px; border-left: 4px solid var(--accent); position: relative; }
+  .pullquote-text { font-family: var(--serif); font-style: italic; font-size: 20px; line-height: 1.55; }
+  .pullquote-attribution { font-family: var(--sans); font-size: 13px; color: var(--muted); margin-top: 10px; }
+  .pullquote-note { font-family: var(--sans); font-size: 13px; color: var(--fg-secondary); margin-top: 6px; }
+
+  /* References */
+  .glossary-row { display: grid; grid-template-columns: 180px 1fr; gap: 16px; padding: 8px 0; border-bottom: 1px solid var(--border-soft); font-size: 14px; }
+  .glossary-row:last-child { border-bottom: none; }
+  .glossary-term { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--accent); }
+  .glossary-definition { color: var(--fg-secondary); line-height: 1.6; }
+  .reading-item { padding: 10px 0; border-bottom: 1px solid var(--border-soft); display: flex; gap: 12px; align-items: baseline; font-size: 14px; }
+  .reading-item:last-child { border-bottom: none; }
+  .reading-type { font-family: var(--sans); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--accent); background: var(--accent-bg); padding: 2px 8px; border-radius: 3px; flex-shrink: 0; min-width: 60px; text-align: center; }
+  .reading-name { font-weight: 600; }
+  .reading-note { color: var(--muted); font-size: 13px; margin-top: 2px; }
+
+  /* TOC */
+  .toc-link { font-family: var(--sans); font-size: 13px; color: var(--muted); transition: color .15s; padding: 4px 0; display: block; }
+  .toc-link:hover, .toc-link.active { color: var(--accent); }
+  .toc-link.active { font-weight: 600; }
+
+  @media print {
+    .no-print { display: none !important; }
+    body { font-size: 12pt; }
+    .question-card, .playbook-block, .mermaid-frame, .kn-card, .evidence-card, .rating-box { break-inside: avoid; }
+  }
+  section[id] { scroll-margin-top: 80px; }
+</style>
+<style>
+#mtbar{display:flex;align-items:center;justify-content:space-between;padding:8px 20px;background:var(--bg,#fafaf7);border-bottom:1px solid var(--border,#e7e5e4);font-family:var(--sans,ui-sans-serif,system-ui,sans-serif);font-size:12px;color:var(--muted,#78716c);transition:padding .18s ease,box-shadow .18s ease}
+#mtbar a{display:inline-flex;align-items:center;gap:9px;min-height:38px;padding:0 12px;margin-left:-12px;color:var(--fg,#1c1917);text-decoration:none;border-radius:9px}
+#mtbar a:hover{background:var(--border-soft,#f5f5f4)}
+#mtbar a i{font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:16px}
+#mtprog{position:fixed;top:0;left:0;height:3px;width:0;background:var(--accent,#B45309);z-index:99;pointer-events:none}
+.mt-original-title{margin-top:10px;font-family:var(--sans,ui-sans-serif,system-ui,sans-serif);font-size:15px;line-height:1.55;color:var(--muted,#78716c)}
+nav.no-print.sticky,body>nav.sticky{transition:min-height .18s ease,box-shadow .18s ease}
+html.mt-scrolled #mtbar{padding-top:4px;padding-bottom:4px;box-shadow:0 8px 24px rgba(0,0,0,.05)}
+html.mt-scrolled nav.no-print.sticky,html.mt-scrolled body>nav.sticky{box-shadow:0 8px 24px rgba(0,0,0,.08)}
+html.mt-scrolled nav.no-print.sticky .max-w-6xl,html.mt-scrolled body>nav.sticky .max-w-6xl{padding-top:.35rem!important;padding-bottom:.35rem!important;min-height:40px!important}
+#mttoc{display:none;align-items:center;justify-content:center;min-width:64px;height:44px;border:1px solid var(--border,#e7e5e4);background:var(--bg-card,#fff);color:var(--fg,#1c1917);border-radius:999px;font-size:12px;font-weight:700;font-family:var(--sans,ui-sans-serif,system-ui,sans-serif);cursor:pointer}
+#mttop{position:fixed;right:16px;z-index:98;display:none;align-items:center;justify-content:center;border:1px solid var(--border,#e7e5e4);background:var(--bg-card,#fff);color:var(--fg,#1c1917);box-shadow:0 8px 24px rgba(0,0,0,.16);cursor:pointer}
+#mttop{bottom:80px;width:46px;height:46px;border-radius:999px;font-size:16px}
+@media (max-width:960px){#mttoc{display:flex}}
+#mttop.show{display:flex}
+#mtsheet{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.42)}
+#mtsheet .mtsheet-in{position:absolute;left:0;right:0;bottom:0;max-height:72vh;overflow:auto;background:var(--bg,#fafaf7);border-radius:18px 18px 0 0;padding:14px 18px calc(22px + env(safe-area-inset-bottom));box-shadow:0 -12px 40px rgba(0,0,0,.2)}
+.mtsheet-head{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:14px;padding:4px 2px 10px;color:var(--fg,#1c1917);font-family:var(--sans,ui-sans-serif,system-ui,sans-serif)}
+#mtclose{width:44px;height:44px;margin:-10px -10px -10px 0;border:0;background:none;font-size:15px;cursor:pointer;color:var(--muted,#78716c)}
+#mtlinks a{display:flex;min-height:46px;align-items:center;padding:2px 8px;color:var(--fg-secondary,#44403c);text-decoration:none;font-size:14px;border-bottom:1px solid var(--border-soft,#f5f5f4);font-family:var(--sans,ui-sans-serif,system-ui,sans-serif)}
+#mtlinks a:hover,#mtlinks a:active{background:var(--border-soft,#f5f5f4)}
+@media (max-width:640px){
+ body{padding-bottom:96px}
+ #mtbar{position:sticky;top:0;z-index:97;padding:4px 14px;font-size:11px}
+ #mtbar a{min-height:32px;padding:0 10px}
+ #mtbar a i{font-size:14px}
+ #mttoc{display:flex;height:44px;min-width:64px;padding:0 14px}
+ .hero-title{font-size:30px!important;line-height:1.22!important;letter-spacing:0!important}
+ .mt-original-title{font-size:14px!important;line-height:1.55!important;color:var(--muted,#57534e)!important}
+ .tldr-block{font-size:18px!important;line-height:1.65!important;padding:18px 0!important}
+ .question-card{padding:16px 18px!important;margin-bottom:24px!important}
+ .question-text{font-size:18px!important;line-height:1.45!important;margin-bottom:12px!important}
+ .question-approach,.question-answer{font-size:15px!important;line-height:1.65!important;padding:10px 12px!important}
+ .premise-explanation,.mental-description,.slide-card figcaption{font-size:14px!important;line-height:1.65!important}
+ #mttop{right:18px;bottom:calc(72px + env(safe-area-inset-bottom));width:44px;height:44px}
+ nav.no-print.sticky .max-w-6xl,body>nav.sticky .max-w-6xl{min-height:44px!important;padding-top:.5rem!important;padding-bottom:.5rem!important}
+}
+@media print{#mtbar,#mtprog,#mttoc,#mttop,#mtsheet{display:none!important}}
+</style>
+</head>
+<body>
+<!--mt-chrome-->
+<div id="mtbar"><a href="/taste/">&larr;&nbsp;<i>Valley Beacon 深读</i></a><button id="mttoc" type="button" aria-label="打开目录">目录</button></div>
+<div id="mtprog"></div>
+<button id="mttop" type="button" aria-label="回到顶部">&uarr;</button>
+<div id="mtsheet" hidden><div class="mtsheet-in"><div class="mtsheet-head">目录<button id="mtclose" type="button" aria-label="关闭">&#10005;</button></div><nav id="mtlinks"></nav></div></div>
+
+
+<nav class="no-print sticky top-0 z-40 backdrop-blur" style="background: color-mix(in srgb, var(--bg) 85%, transparent); border-bottom: 1px solid var(--border);">
+  <div class="max-w-6xl mx-auto flex items-center justify-between px-6 py-3 ui">
+    <a href="#top" class="font-semibold accent text-sm">AI Reader</a>
+    <div class="flex items-center gap-3 text-sm">
+      <button onclick="document.documentElement.classList.toggle('dark')" class="text-muted hover:opacity-80 px-2 py-1" title="切换深色">🌓</button>
+      <button onclick="window.print()" class="text-muted hover:opacity-80 px-2 py-1" title="打印/PDF">🖨</button>
+    </div>
+  </div>
+</nav>
+
+<div id="top" class="max-w-6xl mx-auto px-6 py-12 grid grid-cols-1 lg:grid-cols-[1fr_200px] gap-12">
+  <main id="root" class="space-y-2 min-w-0"></main>
+  <aside class="no-print hidden lg:block">
+    <div class="sticky top-20">
+      <div class="ui text-xs uppercase tracking-wider text-muted mb-3" style="letter-spacing: 0.08em;">目录</div>
+      <nav id="toc"></nav>
+    </div>
+  </aside>
+</div>
+
+<footer class="no-print max-w-6xl mx-auto px-6 py-12 text-xs text-muted text-center ui" style="border-top: 1px solid var(--border);">
+  Generated by ai-reader · 页码可溯源 · Mermaid diagrams · Print-ready
+</footer>
+
+<script id="report-data" type="application/json">{"meta":{"title":"为什么 AI 该有自己的电脑：Anthropic Cowork 拆解","source":"https://www.latent.space/p/felix-anthropic","source_url":"https://www.latent.space/p/felix-anthropic","doc_type":"deep_article","authors":["Felix Rieseberg","swyx","Alessio"],"institution":"Latent Space（播客）× Anthropic（受访者）","publish_date":"2026-03-17","pages":20,"domain":"AI Agent 产品 / 桌面知识工作自动化","mode":"familiar","language":"en","extraction_source":"html","extraction_confidence":"medium","original_title":"Felix Rieseberg — Anthropic Cowork and giving Claude its own computer"},"tldr":"Anthropic 的 Felix Rieseberg 讲 Claude Cowork：Claude Code 的「用户友好超集」，核心是给 Claude 一台自己的 VM 电脑——沙箱既是安全边界也是能力解锁，配合文件式 skills 与本地优先，把委托式自动化延伸到知识工作者。","worth_reading":{"score":"worth-skim","one_liner":"想理解 Cowork 产品哲学与 skills/VM/本地优先取舍的一线视角","who_should_read":"做 Agent 产品、用 Claude Code 想延伸到知识工作的 builder"},"narrative":"故事从一个「意外」开始。2025 年底，Felix 和 Anthropic 团队发现一件反直觉的事：越来越多人在用 Claude Code 干**非编程**的活——报销、填收据、整理 Obsidian 知识库。不懂终端的人想用它，懂终端的人也拿它做非技术工作。这条「技术/非技术」的界线正在模糊。于是团队想把这份能力搬给不会开终端的人，Cowork 就此诞生——本质上就是「跑在一台带护栏的 VM 里、外面裹了一层友好外壳的 Claude Code」。\n\n关键的认知转折是：Felix 反复强调「user-friendly ≠ dumbed-down」。他用十年前 VS Code 的类比——当年也有人说「这是给业余开发者的、认真的人不会用」，结果 VS Code 靠可魔改、可扩展成了主流。Cowork 押的是同一个赌：友好是外壳，可扩展才是本体。而支撑「10 天造出来」的，不是神话，是 Anthropic「原型优先、别写 memo 先把所有候选都造出来」的文化，加上大量已有的内部积木（VM、Claude in Chrome、planning 工具）。\n\n产品的灵魂决策是**把价值押在你的本地电脑上**。Felix 的一句反问贯穿全篇：「我们为什么都在用 MacBook 而不是 iPad 或 Chromebook？」——本地电脑仍有价值，而 Claude 要真正有用，就得拿到你拥有的**同一套工具**。给 Claude 一台自己的（VM）电脑，既是安全沙箱，也是能力解锁：它能自由 apt/brew 装 Python、Node，写脚本、跑命令，而**不必**每一步都来问你「我可以装 Homebrew 吗」。这就接上了另一条主线——审批疲劳。「要么每一步都批、要么 YOLO 全授权」是个假二选一；沙箱是那个中间地带，让你能真正**委托**并走开。swyx 一句点破：「不委托就不叫自动化。」\n\n再往上一层是 skills 与 MCP 之争。skills 的起点也是个意外：一个内部原型想连数据仓库，团队没有去建定制 tool，而是直接甩给模型一个 markdown——「这是 endpoint，API 长这样，你自己搞定」。这么干出奇地有效，于是「给模型一个描述任务的 markdown 文件」这个模式被打包成了 skills。Felix 的下注很明确：与其在 MCP 的刚性 schema 里塞一切，不如用**文件原生、纯文本**的 skills——它天然可移植（就是文件，就是 markdown），谁都会写（像跟新同事口头交代那样写给 Claude 就行）。悬而未决的是可移植性与「哪部分公共、哪部分私人」的张力，以及跨 agent 同步。\n\n结尾落回一个更大的主张：终局不只是「更强的能力」，而是「更多的独立」——把用户从「问问题拿答案」一步步教到「委托越来越大、越来越长、越少干预的任务」。而 Anthropic 内部对这件事的另一面——对初级岗位与劳动力市场的冲击——「深感忧虑」，认为社会讨论得远远不够。这不是一篇技术白皮书，而是一位一线产品/工程负责人把 Cowork 背后的产品哲学、取舍与还没想清楚的问题摊开来讲。","the_one_insight":"给 Agent 一台自己的（沙箱）电脑，把安全边界和能力上限一起解决——委托的前提是你能走开。","key_numbers":[{"metric":"Cowork 从构想到可用","value":"约 10 天","context":"被广泛引用的数字；Felix 强调这靠的是大量已有内部积木，不是从零","page":"p.4"},{"metric":"非技术用途激增的时间窗","value":"2025 年 12 月","context":"团队观察到 Claude Code 被大量用于非编程知识工作的拐点，催生 Cowork","page":"p.3"},{"metric":"计算机使用（computer use）发布至今","value":"约 1 年","context":"Anthropic 最早做 computer use；一年间从「勉强能用」到质变，配合视觉成为超能力","page":"p.13"},{"metric":"VM 磁盘占用观感","value":"被看成约 10-15 GB","context":"用户抱怨大；Felix 称实际写盘会折叠空白，并非真占这么多，是 macOS 显示口径问题","page":"p.15"},{"metric":"VM 启动耗时","value":"有时约 30 秒","context":"swyx 的真实体感；本地 VM 相比裸跑 Claude Code 必然更慢，是明确的取舍代价","page":"p.15"}],"core_questions":[{"question":"Cowork 到底是什么？为什么「用户友好」不等于「阉割版」？","approach":"从 Claude Code 被非技术用户挪用的现象出发，用 VS Code vs Visual Studio 的历史类比论证「友好外壳 + 可扩展本体」","answer":"Cowork 是跑在带护栏 VM 里的 Claude Code，加一层更方便更安全的外壳。它不是减法而是超集：正如 VS Code 靠可魔改/可扩展成为主流，Cowork 也靠易扩展、易接入现有工作流取胜。核心思路是不重建 Claude Code，只把已有积木组合成对普通用户合理的形态。"},{"question":"为什么要给 Claude 一台自己的（VM）电脑，而不是全放云端？","approach":"把 Claude 拟人化成一名员工来推理，并列出本地 vs 云端的具体权衡（认证锁定、隐私亲密度、工具可达性）","answer":"因为一个真正有用的实体需要和你一样的工具；把工具一件件搬上云既繁琐又易触发网站的异地登录风控。VM 让 Claude 在 Linux 里自由装工具、写脚本，同时用网络出入口和文件系统隔离控制风险。Felix 认为硅谷整体低估了本地电脑，把 Claude 放到「你工作的地方」往往更强。"},{"question":"为什么 skills 可能比多数人以为的更重要？它和 MCP 是什么关系？","approach":"用内部连数据仓库的真实案例说明 skills 的起源，对比 MCP 的刚性 schema","answer":"skills 就是描述任务的 markdown 文件——文件原生、纯文本、零学习门槛、天然可移植。起源是团队发现与其为数据仓库建定制 tool，不如直接把 endpoint 甩给模型让它自己搞定，效果出奇好。Felix 越来越倾向文件式、文本原生的接口而非把一切塞进 MCP 的固定 tool schema，行业已能看到从 MCP 向 skills 的缓慢迁移。"},{"question":"审批疲劳怎么破？如何在「全批」和「全授权」之间找中间地带？","approach":"指出「approve every command」不是可持续的长期 UX，引入瑞士奶酪（多层防御）模型","answer":"沙箱（VM）就是那个中间地带：一旦控制了网络层和文件系统层，就不再需要对每条命令、每个脚本逐一批准。不必等 100% 对齐，用长期沿用的瑞士奶酪多层防御即可，但行业需要投入更多在「你不必审批一切」的系统上。委托的本质是能放心走开。"},{"question":"AI 自动化对就业、尤其初级岗位意味着什么？","approach":"Felix 坦承只敢谈工程领域；Alessio 提出「模拟工作/压缩早期职业」的半玩笑方案；引 Waterloo 实习模式","answer":"Anthropic 作为组织对劳动力市场冲击「深感忧虑」，尤其初级岗位——那些被自动化掉的、大家本就觉得没价值的活，过去正是给初级员工练手的。Felix 观察到资深工程师被加速、Waterloo 那种大量实习的新人明显更 ready，暗示未来需要压缩初级阶段的学习密度。他强调这该由社会/经济学家/政府更认真讨论。"}],"_type_deep_article":{"thesis":"AI 要真正有用，就该拥有一台自己的（沙箱化）电脑并被放在你本地工作的地方；沙箱同时解决安全与能力，配合文件原生的 skills，把 Claude Code 的委托式自动化从程序员延伸到所有知识工作者。","argument_chain":{"summary":"非技术用户挪用 Claude Code → 做成友好超集 Cowork → 给 Claude 一台 VM 电脑（安全=能力）→ 本地优先 + skills 可移植 → 委托越来越大的任务（沙箱破解审批疲劳）","mermaid":"flowchart LR\n  A[非技术用户挪用<br>Claude Code] --> B[Cowork=友好超集<br>不重建只组合]\n  B --> C[给 Claude 一台 VM 电脑]\n  C --> D[沙箱: 安全边界<br>同时是能力解锁]\n  C --> E[本地优先<br>Claude 用你的同套工具]\n  E --> F[skills=markdown 文件<br>文本原生可移植]\n  D --> G[破解审批疲劳<br>能委托并走开]\n  F --> G\n  G --> H[委托更大更长<br>更少干预的任务]"},"key_points":[{"point":"Cowork 是 Claude Code 的用户友好超集，不是阉割版；靠可扩展性取胜（VS Code 类比）","support":"Felix 亲述 Cowork = 带护栏 VM 里的 Claude Code；用 12 年前 VS Code「被当业余工具、最终靠可魔改成主流」的历史类比论证友好≠弱","support_type":"firsthand","page":"p.3"},{"point":"执行变便宜，产品开发范式从「写 memo/spec 再执行」转向「先把所有候选都造出来，用现实而非理论选优」","support":"Felix：内部已接近「别写 memo，直接 build all the candidates，小焦点组测试后选最好」；这与一年前的做法已明显不同","support_type":"firsthand","page":"p.4"},{"point":"VM 是 Cowork 最强的部分：给 Claude 一台自己的电脑既是安全沙箱也是能力解锁","support":"Linux VM 让 Claude 自由装 Python/Node、写脚本；有严格网络出入口控制；用户用自然语言表达边界，无需为「装 Homebrew」这类问题去问真人（律师/市场同事）","support_type":"firsthand","page":"p.5"},{"point":"本地优先：硅谷低估了本地电脑；把 Claude 放在「你工作的地方」往往更强","support":"「我们为什么都用 MacBook 而非 iPad/Chromebook」的反问；把工具搬云端会触发网站异地登录风控（Chrome cookies 案例）；Felix 没耐心给每个工具逐一维护权限","support_type":"firsthand","page":"p.6"},{"point":"Cowork 与 Claude Code 的差异主要在 system prompt 与评测目标：coding evals vs knowledge-work evals，更长规划视野、更重 planning/ask-user 工具","support":"Felix：Claude Code 按典型软件工程任务评测，Cowork 按财务/法务式知识工作评测（他本人常用来管房贷/家庭理财）；因任务更长更模糊，system prompt 里明确要求重用 planning 和 ask-user-question","support_type":"firsthand","page":"p.6"},{"point":"skills 就是描述任务的 markdown 文件——零门槛、超个性化、天然可移植；行业正从 MCP 缓慢迁向 skills","support":"起源案例：连数据仓库时团队没建定制 tool，直接把 endpoint 甩给模型让它自己搞定，效果极好，遂打包成 skills；swyx 现场演示把一次性 YouTube 上传流程让 Claude 写成可复用 skill、再拆成三个 skill","support_type":"firsthand","page":"p.8"},{"point":"审批疲劳无解于「全批 vs YOLO」；沙箱是中间地带，让委托成为可能（瑞士奶酪多层防御）","support":"Felix：控制网络与文件系统层后就不必逐命令审批；swyx：「不委托就不叫自动化」；无需 100% 对齐，用长期沿用的瑞士奶酪模型即可","support_type":"firsthand","page":"p.16"},{"point":"Chrome/DOM 视觉是超能力：让 Claude 看见它正在处理的东西，效果质变；Claude 越来越倾向自己写脚本（如 AppleScript）而非依赖第三方 MCP 工具","support":"swyx：因为感知 Cowork 的 Chrome 集成更好，把设计转代码/看网页任务交给它；Felix：内置浏览器让 Claude 能 debug DOM；swyx 弃用第三方 automation MCP，改让 Claude 自写并执行 AppleScript","support_type":"firsthand","page":"p.14"},{"point":"对初级岗位/劳动力市场的冲击：Anthropic 组织层面「深感忧虑」，认为社会讨论不足","support":"Felix：被自动化的正是过去交给初级员工的活；观察到资深工程师被加速、Waterloo 大量实习的新人更 ready；Alessio 半玩笑提出用 AI「模拟工作、压缩早期职业」","support_type":"firsthand","page":"p.11"},{"point":"为什么还坚持 Electron/内嵌 Chromium：操作系统自带 webview「就是不够好」，且只能随系统升级；Chromium 是工程奇迹，跨机器可靠","support":"Felix 以 Slack 时代 WKWebView 渲染 bug 无法单独修复为例；Chromium 处理 YouTube 动态码率协商、GPU 驱动 workaround，坏了 24 小时内修复；连虚幻引擎渲染文本都用 Chromium","support_type":"firsthand","page":"p.18"}],"author_stance":"受访者 Felix Rieseberg 是 Anthropic 的 Cowork 负责人（自称 member of technical staff/偏工程），也是 Electron 核心维护者、前 Slack 桌面团队成员、把 Windows 95 塞进 JS 的 v86 玩家——桌面应用工程的资深内行。因此他对本地优先、Electron/Chromium、沙箱的判断有一手权威，但立场明显：这是在为自己主导的产品与技术路线（VM、本地、skills>MCP）辩护，带招募/布道色彩。主持人 swyx 与 Alessio 是重度用户兼从业者，访谈基调是热情夸赞（swyx 结尾称「今年最接近 AGI 的体验」），批判性提问有限。这是产品负责人视角的路线图叙事，不是中立评测。","practical_takeaways":["写 skill 就像给新同事口头交代任务：用自然语言把「怎么做」讲给 Claude，它多半在你写完前就懂了——不需要教程或固定 schema","上手 Cowork 的正确姿势：先拿一个你平时靠鼠标点来点去的知识工作任务，让它做一遍；信任建立后再逐步扩大范围、并让它把流程固化成 skill（swyx 的 YouTube 上传→拆成 3 个 skill 就是范例）","把一次性、人工引导的重复流程让 Claude 固化成可复用 skill；需要时再把大 skill 拆成小 skill + 一个编排父 skill","skills 是文件，用 Dropbox/Google Drive 等云盘 + 符号链接（symlink）可在多个 agent harness 间共享，避免手动 copy-paste（Alessio 的做法）","别过度纠结模型/提示细节：Felix 建议「直接告诉它你要什么」，让模型自己找路径，可能不是你预想的方式但通常能成","让 Claude 自写并执行 AppleScript/脚本，往往比装一堆第三方 automation MCP 更可靠、更贴合你的场景","plugins 是 skills 的容器格式，Claude Code 与 Cowork 通用；可把一个 GitHub repo 当作 skills/plugin marketplace 安装，这是当前的可移植方案","对不可逆动作（发邮件、永久删除）加一句「执行前先跟我确认」，其余交给沙箱——这是当前可行的委托安全线"]},"_unfamiliar_mode":null,"_familiar_mode":{"increments":[{"fact":"Cowork 的三大件被 Felix 亲口确认：VM（最重要）+ 与 Claude in Chrome 的紧密集成 + system prompt 里的知识工作引导；planning「基本可以从心智模型里拿掉」，只是把已有能力暴露出来","why_new":"把「Cowork 到底比 Claude Code 多了什么」从坊间猜测收敛到当事人确认：差异主要在 VM + Chrome + prompt，而非独有的规划黑魔法","page":"p.5"},{"fact":"Cowork 与 Claude Code 用不同评测集：前者按知识工作（财务/法务式）评，后者按软件工程任务评；system prompt 明确要求 Cowork 重用 planning 和 ask-user-question 以应对更长更模糊的任务","why_new":"揭示同一底座上「靠 eval 目标 + system prompt 分化出两个产品」的具体机制","page":"p.6"},{"fact":"skills 的真实起源：一个内部数据仓库连接原型，团队放弃建定制 tool，改成直接把 API endpoint 甩给模型（「这是 endpoint，你自己搞定」），效果好到被打包成 skills","why_new":"把 skills 从「又一个抽象层」还原成一个具体的工程意外，解释了它为何是 markdown 而非 schema","page":"p.8"},{"fact":"Windows 上 Cowork 用 Windows Host Compute System（与 WSL2 同底座），macOS 用 Apple Virtualization Framework；上周开始自研网络驱动以适配企业的包检测/代理环境","why_new":"具体到 VM 的宿主实现与「在被 IT 锁死的公司电脑上也能跑」的工程理由","page":"p.15"},{"fact":"swyx 演示中出现 Opus 4.6；Felix 建议用户别再纠结模型选择，「直接说要什么」","why_new":"透露了访谈时点的模型版本，以及 Anthropic 内部对「模型已够强、别过度调教」的态度","page":"p.13"}],"new_takes":[{"take":"硅谷整体低估了本地电脑；把 Claude 放在「你工作的地方」比一味上云更强","vs_mainstream":"与「一切皆云、远程 agent 是终局」的主流叙事相反——Felix 认为本地拥有你全套工具与登录态，是能力而非负担"},{"take":"AI 不该帮你订机票；default 的『booking a flight』demo 是个糟糕的展示","vs_mainstream":"反对把订机票当作 agent 的标志性 demo——他认为这类任务的『个人偏好 vs 通用最优』混合结构恰好暴露了 demo 的空洞"},{"take":"很多『AI 垂类/wrapper』会被压缩：短期靠专门化有效，但更强的通用模型 + 更好的原语会吸收大量窄用例","vs_mainstream":"对『每个垂直场景都值得一个专门 startup』的乐观论泼冷水；enterprise search 等被视为『cowork 的一个小功能』"},{"take":"别在 scaffolding 上过度投资：模型很快会超过你的脚手架，很多纠偏逻辑会随下一个模型 drop 而失效","vs_mainstream":"与『用工程 scaffolding 把当前模型能力榨干』的产品直觉相反——身处 frontier lab 让他更倾向『给能力 + 等下一个模型』"},{"take":"沙箱 > 逐命令审批：『超安全=啥也别干』不是真 UX，行业该投入『你不必审批一切』的系统","vs_mainstream":"挑战把『每步都要人批』当默认安全姿态的做法，主张用瑞士奶酪多层防御换取可委托性"}],"insights":[{"insight":"安全边界和能力上限往往是同一个设计决策：把 Claude 关进 VM，既降低了『装了 Python 谁都能干任何事』的风险，又解放了它自由装工具/写脚本的能力","implications":"评估 agent 产品别把 safety 和 capability 当对立项——好的沙箱是二者的公约数；『approve every command』式安全其实牺牲了产品的全部价值"},{"insight":"执行变便宜真正改变的不是『重建所有原语』，而是『把 Lego 积木组合成对用户合理的形态』这层的成本——平台底座因此更值钱而非贬值","implications":"『软件价值归零因为能重造』是误读；拥有可组合的平台底座（models+skills+MCP+VM）反而在增值，投资应押在原语与组合层"},{"insight":"文件原生 + 纯文本是可移植性的关键：skills 天然跨 agent，因为它就是文件；难点不在格式而在『哪部分公共可复用、哪部分私人上下文』的切分（如 string interpolation 插用户名/电话）","implications":"跨 agent 的『skills 权威源/Dropbox of skills』是个诱人但未必成立的生意；真正待解的是公私切分的结构，而非又一个 registry"},{"insight":"把 agent 拟人成『同事』能一路推导产品形态：它需要自己的电脑、可能需要自己的 Gmail/Slack handle、用人类同款工具（Google Doc 评论）与人协作","implications":"multiplayer/coworker-to-coworker 的终局可能不是自建定制协议，而是直接给 agent 人类的通信账号——但『强大』与『creepy』常并肩而来"},{"insight":"『本地 vs 云端』的真正约束常不是技术而是社会/风控：异地登录会被网站锁号、把整台电脑克隆上云触及『亲密度』而非仅隐私","implications":"远程 agent 的落地瓶颈被低估了——auth 与信任的社会性摩擦，可能比算力或模型能力更早卡住『全上云』路线"}],"tensions":[{"point":"10 天造出 Cowork 的叙事","your_prior":"『10 天做出一个产品』听起来像营销神话或纯 vibe coding 的胜利","doc_view":"Felix 主动去魅：真正靠的是大量已有内部积木（VM、Claude in Chrome、planning），如同『用 React 建站』——组合成本低，不是从零"},{"point":"planning 是不是 Cowork 的独门功夫","your_prior":"Cowork 的九步计划、可编辑计划体验『感觉』比 Claude Code 更长程、更高级","doc_view":"Felix：这些能力 Claude Code 本就有，Cowork 只是暴露出来 + 更好的 UI + system prompt 引导它更常用 planning；用户是被 prompt 与更长任务塑造了体感"},{"point":"user-friendly 的含义","your_prior":"『用户友好版』通常=功能更少的阉割版","doc_view":"恰恰相反，是超集：友好是外壳，可扩展/可接入现有工作流才是本体（VS Code 类比）"},{"point":"本地 VM 的体验代价","your_prior":"既然给 Claude 一台电脑这么强，本地跑应该顺理成章","doc_view":"取舍是真实的：VM 启动约 30 秒、观感占用 10+GB、比裸跑 Claude Code 慢；Felix 坦承『trade-offs are real』，只是认为值得"}],"open_questions":["skills 的公私切分怎么做才优雅？string interpolation 插用户名/电话被 Felix 自评『clunky』，行业尚无解","跨 agent 的 skills 同步/权威源是不是一门生意？『Dropbox of skills / skill authority』Felix 认为『作为 idea 很酷但未必是可行 business』","Claude 该在『你面前这台』、『你电脑上的 VM』还是『云端某台』电脑上行动？三种形态各有取舍，Felix 明说自己没有答案","多 agent 协作（multiplayer/coworker-to-coworker）用自建协议还是直接给 agent 人类账号（Gmail/Slack handle）？还没定；且『强大』与『creepy』边界模糊","scaffolding 该投多深？模型很快会超过脚手架，投入过多可能被下一个模型 drop 抹平——这是个 Felix 承认的『赌注』","Cowork 与 Claude Code 的能力差距（coding vs 知识工作）在未来 3 代模型后还会存在吗？Felix 明说『对我有点不清楚』","本地 agent 与用户对同一台电脑的资源/焦点竞争如何解（『它在干活我就没法用电脑』）？Alessio 提出、Felix 承认这是待解的交互难题"]},"critical_lens":{"strengths":["受访者是 Cowork 负责人 + Electron 核心维护者，本地优先/VM/Chromium 的判断有一手工程权威，多处给出具体机制（VM 宿主、网络驱动、WKWebView bug）而非空谈","对多个热点主动去魅：10 天神话、planning 是否独有、VM 占用真相——反而增强可信度","把 skills 起源讲成一个具体工程意外，比『又一个抽象层』的官方说法更可验证、更有解释力","坦承大量未解问题（公私切分、多 agent、本地/云取舍、scaffolding 赌注），不粉饰路线图"],"weaknesses":["本质是产品负责人的路线图布道，非中立评测；两位主持人是重度粉丝用户，批判性提问有限（结尾『今年最接近 AGI』式赞美）","几乎所有『效果好/质变』类判断都是主观体感与轶事（swyx 的 demo、Felix 的个人用例），无量化 eval 数据支撑","对『AI 垂类会被压缩』『别投 scaffolding』等强判断，利益位置明显（Anthropic 卖通用模型），需打折","劳动力市场冲击部分 Felix 反复自限『我不是合适的人评估』，Alessio 的『模拟工作』方案自称半玩笑，讨论停在忧虑与直觉，无实质方案","语音转写噪声大：Claude Code/Cowork/Anthropic 等专有名词被系统性误转（clock code/clod/philanthropic），个别技术细节（模型版本、人名如 Barry/Mike）需以官方渠道核对"],"what_to_verify":[{"item":"Cowork「10 天」及其依赖的『已有内部积木』的真实构成","how":"对照 Anthropic 官方发布说明与 Cowork 发布时间线；Felix 已主动限定该数字含义"},{"item":"VM 实际磁盘占用与启动耗时（10-15GB / 30 秒是否随版本改善）","how":"以当前版本实测为准；transcript 是 2026-03 时点体感，且承认是已知取舍"},{"item":"『从 MCP 迁向 skills 是行业趋势』这一判断","how":"交叉查证第三方（非 Anthropic）生态数据与他厂 agent 产品的接口选择，避免只听卖方一面之词"},{"item":"访谈中出现的具体名词（Opus 4.6、人名 Barry/Mike、v86/Fabian、Tauri）","how":"以官方文档/GitHub 核对——transcript 无逐句时间戳且转写噪声大，专有名词不可直接采信"}]},"reading_map":[{"section":"Show notes / 话题清单 + 时间戳目录","pages":"pp.1-2","summary":"全集脉络与 40+ 话题小标题、章节时间戳","verdict":"skim","why":"最快的全局地图，但正文才有干货"},{"section":"Cowork 是什么 + user-friendly≠阉割（VS Code 类比）","pages":"pp.3-4","summary":"起源、超集定位、10 天与原型优先文化、执行变便宜","verdict":"deep","why":"产品定位与核心认知转折"},{"section":"三大件（VM/Chrome/prompt）+ 本地优先 + 评测差异","pages":"pp.5-7","summary":"VM 为何最强、本地 vs 云取舍、coding vs 知识工作 eval、planning/ask-user","verdict":"deep","why":"全篇最硬的架构与哲学核心"},{"section":"skills 起源 + swyx 的 YouTube/skill 演示 + skills 可移植性","pages":"pp.8-10","summary":"markdown 即 skill、拆分/编排、plugins 容器、公私切分难题","verdict":"deep","why":"skills>MCP 的核心论点与实操范例"},{"section":"垂类会否被压缩 + 初级岗位/劳动力冲击 + 起飞时点","pages":"pp.11-12","summary":"AI wrapper 前景、Waterloo 实习模式、模拟工作、gradual vs big-bang","verdict":"skim","why":"有洞见但多为直觉与忧虑，无实质方案"},{"section":"finance/税务 + 视觉/computer use 一年进化 + Claude 自写脚本","pages":"pp.13-14","summary":"verticals 团队、税务用例、vision 是超能力、弃第三方 MCP 改 AppleScript","verdict":"skim","why":"有料的实操趋势，但偏演示与轶事"},{"section":"该不该给 Claude 自己的电脑 + Windows95/JS + VM/沙箱取舍 + 审批疲劳","pages":"pp.14-16","summary":"第二光标坏点子、宿主实现、瑞士奶酪、委托与安全的中间地带","verdict":"deep","why":"『AI 该有自己电脑』主线与安全设计的关键论证"},{"section":"Cowork 未来 + Electron/Chromium 为何仍重要","pages":"pp.17-18","summary":"越走越独立、内嵌 Chromium 的理由、OS webview 之弊","verdict":"skim","why":"路线图 + 桌面工程 lore，行内人可读"},{"section":"多 agent/coworker 协作 + Anthropic Labs + 收尾","pages":"pp.19-20","summary":"给 agent 人类账号、skill 互问、labs 做半破碎的疯狂实验","verdict":"skim","why":"开放式畅想，信息密度递减"}],"quotes":[{"text":"Claude Cowork is a user friendly version of Claude Code.","page":"p.3","note":"一句话定位；后文反复论证『友好=超集而非阉割』"},{"text":"The virtual machine is probably the most powerful thing. ... It is quite powerful to give Claude [its own] computer that is like generally a good idea.","page":"p.5","note":"全篇标题主张『AI 该有自己电脑』的原句根据；VM 既是安全也是能力"},{"text":"I generally believe that Silicon Valley overall is undervaluing the local computer. And my default argument for that is always how come we're all using MacBooks and not like an iPad or a Chromebook?","page":"p.6","note":"本地优先论的核心反问"},{"text":"It's not automation if you don't delegate. ... You need to be able to like delegate and walk away and trust that this thing is not gonna mess [things up] dramatically.","page":"p.16","note":"swyx 点破 + Felix 承接：委托是自动化的前提，沙箱为此存在"},{"text":"It's all just files and folders, and that makes it very portable on its own.","page":"p.10","note":"skills 可移植性的根据——文件原生、纯文本（转写把 folders 误作 vultures）"}],"references":{"glossary":[{"term":"Claude Cowork","definition":"跑在带护栏 VM 里、面向非终端用户的 Claude Code 友好超集"},{"term":"Skills","definition":"描述任务的 markdown 文件，作可复用/可移植的 agent 工作流抽象"},{"term":"Plugins","definition":"skills 的容器格式，Claude Code 与 Cowork 通用，可从 GitHub repo 安装"},{"term":"MCP","definition":"Model Context Protocol，用固定 tool schema 连外部能力；Felix 认为正被 skills 部分取代"},{"term":"Swiss cheese model","definition":"多层防御安全观：单层有洞，多层叠加使漏洞对不齐"},{"term":"Computer use","definition":"让模型像人一样操作电脑（截图+点击）的能力，Anthropic 最早推出"},{"term":"Apple Virtualization Framework / Windows HCS","definition":"Cowork 在 macOS/Windows 上跑 VM 所用的系统级虚拟化底座（后者与 WSL2 同源）"}],"further_reading":[{"type":"person","name":"Felix Rieseberg","note":"受访者：Cowork 负责人、Electron 核心维护者、前 Slack 桌面团队"},{"type":"code","name":"felixrieseberg/windows95 (基于 v86)","note":"把 Windows 95 塞进 Electron 的经典项目，访谈中被提及"},{"type":"company","name":"Anthropic Cowork / Claude Code","note":"本文主角产品线；官方发布说明可交叉核对访谈细节"},{"type":"company","name":"Latent Space Podcast","note":"AI Engineer 播客，本访谈来源；full show notes 在 latent.space"}]}}</script>
+
+<script type="module">
+  const data = JSON.parse(document.getElementById('report-data').textContent);
+  const root = document.getElementById('root');
+  const tocEl = document.getElementById('toc');
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const sections = [];
+
+  let sectionCounter = 0;
+  const section = (id, label, inner, opts = {}) => {
+    sectionCounter++;
+    sections.push({ id, label });
+    const subhead = opts.subhead ? `<div class="section-subhead">${esc(opts.subhead)}</div>` : '';
+    return `<section id="${id}">
+      <div class="section-heading">
+        <span class="num">${String(sectionCounter).padStart(2, '0')}</span>
+        <span>${esc(label)}</span>
+      </div>
+      ${subhead}${inner}
+    </section>`;
+  };
+
+  const pageRef = (p) => p ? `<span class="page-ref">📍 ${esc(p)}</span>` : '';
+  const signClass = (s) => {
+    const t = String(s ?? '');
+    if (/^[+↑]|增|涨/.test(t.trim())) return 'pos';
+    if (/^[-−↓]|降|跌/.test(t.trim())) return 'neg';
+    return '';
+  };
+
+  // ===== Hero =====
+  const meta = data.meta || {};
+  const DOC_TYPES = {
+    paper:           { label: '学术论文',  color: '#2563eb' },
+    tech_report:     { label: '技术报告',  color: '#0d9488' },
+    broker_research: { label: '投行研报',  color: '#B45309' },
+    earnings:        { label: '公司财报',  color: '#7c3aed' },
+    deep_article:    { label: '深度长文',  color: '#db2777' },
+  };
+  const dt = DOC_TYPES[meta.doc_type] || { label: meta.doc_type || '文档', color: '#78716c' };
+  const docBadge = `<span class="badge" style="background: color-mix(in srgb, ${dt.color} 14%, transparent); color: ${dt.color};">${esc(dt.label)}</span>`;
+  const modeBadge = meta.mode === 'unfamiliar'
+    ? '<span class="badge mode-badge">陌生领域 · 系统性学习</span>'
+    : meta.mode === 'familiar'
+    ? '<span class="badge mode-badge">熟悉领域 · 增量获取</span>' : '';
+  const extBadge = meta.extraction_source
+    ? `<span class="ui text-xs text-muted">📄 ${esc(meta.extraction_source)}${meta.extraction_confidence && meta.extraction_confidence !== 'high' ? ` · ⚠ ${esc(meta.extraction_confidence)} 置信度` : ''}</span>` : '';
+
+  const metaBits = [
+    meta.pages && `<span class="text-muted ui text-sm">📑 ${esc(meta.pages)} 页</span>`,
+    meta.publish_date && `<span class="text-muted ui text-sm">📅 ${esc(meta.publish_date)}</span>`,
+    meta.institution && `<span class="text-muted ui text-sm">🏛 ${esc(meta.institution)}</span>`,
+    meta.domain && `<span class="text-muted ui text-sm">🏷 ${esc(meta.domain)}</span>`,
+    meta.language && `<span class="text-muted ui text-sm">🌐 ${esc(meta.language).toUpperCase()}</span>`,
+  ].filter(Boolean).join(' · ');
+
+  const authors = Array.isArray(meta.authors) && meta.authors.length
+    ? `<div class="ui text-sm text-muted mt-3">✍️ ${meta.authors.slice(0, 8).map(esc).join(' · ')}${meta.authors.length > 8 ? ` 等 ${meta.authors.length} 人` : ''}</div>` : '';
+
+  const sourceLink = meta.source_url
+    ? `<a href="${esc(meta.source_url)}" target="_blank" class="ui text-sm accent hover:underline">原文链接 →</a>`
+    : meta.source ? `<span class="ui text-xs text-muted mono">${esc(meta.source)}</span>` : '';
+
+  const heroHTML = `
+    <header class="space-y-4 pb-8" style="border-bottom: 1px solid var(--border);">
+      <div class="flex items-center gap-3 flex-wrap">${docBadge}${modeBadge}${extBadge}</div>
+      <h1 class="hero-title text-3xl md:text-4xl">${esc(meta.title || 'Document Report')}</h1>
+      <div class="flex flex-wrap gap-x-1 gap-y-1 items-center">${metaBits}</div>
+      ${authors}
+      <div class="pt-2">${sourceLink}</div>
+    </header>`;
+
+  // ===== TLDR + worth_reading =====
+  let tldrHTML = '';
+  if (data.tldr) {
+    const wr = data.worth_reading || {};
+    const WORTH = { 'must-read': ['#15803d', '值得精读'], 'worth-skim': ['#ca8a04', '值得略读'], 'reference-only': ['#78716c', '存档备查'] };
+    const w = WORTH[wr.score];
+    const worthRow = wr.score ? `
+      <div class="worth-row">
+        <span class="badge" style="background: color-mix(in srgb, ${w[0]} 14%, transparent); color: ${w[0]};">${w[1]}</span>
+        ${wr.one_liner ? `<span>${esc(wr.one_liner)}</span>` : ''}
+        ${wr.who_should_read ? `<span class="text-muted">· 适合精读原文的人：${esc(wr.who_should_read)}</span>` : ''}
+      </div>` : '<div class="worth-row" style="padding:0 0 16px;"></div>';
+    tldrHTML = section('tldr', '一句话总结',
+      `<div class="tldr-block">${esc(data.tldr)}</div>${worthRow}`);
+  }
+
+  // ===== Narrative (导读故事) =====
+  let narrativeHTML = '';
+  if (data.narrative) {
+    const paras = String(data.narrative).split(/\n\n+/).map(p => `<p>${esc(p.trim())}</p>`).join('');
+    narrativeHTML = section('narrative', '导读故事',
+      `<div class="narrative-block">${paras}</div>`,
+      { subhead: '把整份文档讲成一个连续的故事 · 一个例子贯穿到底 · 读完应能向别人复述。' });
+  }
+
+  // ===== Key numbers =====
+  let knHTML = '';
+  if (Array.isArray(data.key_numbers) && data.key_numbers.length) {
+    const knSize = (v) => { const n = String(v ?? '').length; return n > 24 ? 'kn-sm' : n > 14 ? 'kn-md' : ''; };
+    knHTML = section('key-numbers', '关键数字',
+      `<div class="kn-grid">
+        ${data.key_numbers.map(k => `
+          <div class="kn-card">
+            <div class="kn-metric">${esc(k.metric)}</div>
+            <div class="kn-value ${signClass(k.value)} ${knSize(k.value)}">${esc(k.value)}</div>
+            ${k.context ? `<div class="kn-context">${esc(k.context)}</div>` : ''}
+            ${k.page ? `<div class="kn-page">📍 ${esc(k.page)}</div>` : ''}
+          </div>`).join('')}
+      </div>`,
+      { subhead: '原文里最重要的数字 · 每个都标了出处页码，可回原文核对。' });
+  }
+
+  // ===== Core questions =====
+  let questionsHTML = '';
+  if (Array.isArray(data.core_questions) && data.core_questions.length) {
+    questionsHTML = section('questions', '核心问题',
+      data.core_questions.map((q, i) => `
+        <div class="question-card">
+          <span class="question-num">问题 ${String(i+1).padStart(2,'0')}</span>
+          <div class="question-text">${esc(q.question)}</div>
+          ${q.approach ? `<div class="question-approach"><span class="label-pill">论证路径</span>${esc(q.approach)}</div>` : ''}
+          ${q.answer ? `<div class="question-answer"><span class="label-pill">文档的答案</span>${esc(q.answer)}</div>` : ''}
+        </div>`).join(''),
+      { subhead: '不是结论清单，是这份文档真正在回答的问题。读完每条你应该能复述论证。' });
+  }
+
+  // ===== Type blocks =====
+  let typeHTML = '';
+
+  // ---- paper ----
+  const tp = data._type_paper;
+  if (tp) {
+    let bits = '';
+    if (tp.problem || tp.prior_gap) {
+      bits += `<div class="space-y-0">
+        ${tp.problem ? `<div class="premise"><div class="premise-point">要解决的问题</div><div class="premise-explanation">${esc(tp.problem)}</div></div>` : ''}
+        ${tp.prior_gap ? `<div class="premise"><div class="premise-point">之前的方法卡在哪</div><div class="premise-explanation">${esc(tp.prior_gap)}</div></div>` : ''}
+      </div>`;
+    }
+    if (tp.method) {
+      const m = tp.method;
+      bits += `<div class="mental-block" style="margin-top:24px;">
+        <div class="mental-name">方法：${esc(m.name || '')}</div>
+        ${m.key_idea ? `<div class="application-callout" style="margin-bottom:16px;"><div class="label">核心 idea（一句话）</div><div>${esc(m.key_idea)}</div></div>` : ''}
+        ${m.description ? `<div class="mental-description">${esc(m.description)}</div>` : ''}
+        ${m.mermaid ? `<div class="mermaid-frame"><div class="mermaid">${esc(m.mermaid)}</div></div><div class="mermaid-caption">图：${esc(m.name || '方法结构')}</div>` : ''}
+      </div>`;
+    }
+    if (Array.isArray(tp.results) && tp.results.length) {
+      bits += `<div style="margin-top:8px;">
+        <div class="ui text-xs uppercase tracking-wider text-muted mb-4" style="letter-spacing:0.08em;">主要结果 · 声称 vs 证据</div>
+        ${tp.results.map(rr => `
+          <div class="evidence-card">
+            <div class="evidence-claim">${esc(rr.claim)}
+              ${rr.strength ? `<span class="strength-badge strength-${esc(rr.strength)}">${({strong:'证据强',moderate:'证据中',weak:'证据弱'})[rr.strength] || esc(rr.strength)}</span>` : ''}
+              ${pageRef(rr.page)}
+            </div>
+            ${rr.evidence ? `<div class="evidence-detail">${esc(rr.evidence)}</div>` : ''}
+          </div>`).join('')}
+      </div>`;
+    }
+    if (Array.isArray(tp.limitations) && tp.limitations.length) {
+      bits += `<div class="warn-box"><div class="label">局限性</div><ul>
+        ${tp.limitations.map(l => `<li>${esc(l.point)} <span class="ui text-xs" style="color:var(--muted);">[${l.source === 'analyst' ? '分析者补充' : '作者承认'}]</span></li>`).join('')}
+      </ul></div>`;
+    }
+    if (tp.reproducibility) {
+      bits += `<div class="info-box"><div class="label">可复现性</div><div class="ui text-sm" style="color:var(--fg-secondary); line-height:1.7;">${esc(tp.reproducibility)}</div></div>`;
+    }
+    typeHTML = section('paper', '论文拆解', bits, { subhead: '问题 → 方法 → 证据强度 → 局限。声称和证据分开看。' });
+  }
+
+  // ---- tech_report ----
+  const tt = data._type_tech_report;
+  if (tt) {
+    let bits = '';
+    if (tt.goal) {
+      bits += `<div class="premise"><div class="premise-point">系统目标</div><div class="premise-explanation">${esc(tt.goal)}</div></div>`;
+    }
+    if (tt.architecture) {
+      bits += `<div class="mental-block" style="margin-top:24px;">
+        <div class="mental-name">架构</div>
+        ${tt.architecture.description ? `<div class="mental-description">${esc(tt.architecture.description)}</div>` : ''}
+        ${tt.architecture.mermaid ? `<div class="mermaid-frame"><div class="mermaid">${esc(tt.architecture.mermaid)}</div></div><div class="mermaid-caption">图：系统架构</div>` : ''}
+      </div>`;
+    }
+    if (Array.isArray(tt.key_techniques) && tt.key_techniques.length) {
+      bits += `<div class="ui text-xs uppercase tracking-wider text-muted mb-4" style="letter-spacing:0.08em; margin-top:8px;">关键技术</div>
+        <div class="space-y-0">
+        ${tt.key_techniques.map(k => `
+          <div class="premise">
+            <div class="premise-point">${esc(k.name)}</div>
+            <div class="premise-explanation">${esc(k.what)}${k.why_it_matters ? `<br><span style="color:var(--accent);">为什么关键：</span>${esc(k.why_it_matters)}` : ''}</div>
+          </div>`).join('')}
+        </div>`;
+    }
+    if (Array.isArray(tt.benchmarks) && tt.benchmarks.length) {
+      bits += `<div class="ui text-xs uppercase tracking-wider text-muted mb-3" style="letter-spacing:0.08em; margin-top:24px;">Benchmark 成绩</div>
+        <table class="data-table">
+          <thead><tr><th>Benchmark</th><th>成绩</th><th>对照</th><th>页</th></tr></thead>
+          <tbody>${tt.benchmarks.map(b => `
+            <tr><td>${esc(b.benchmark)}</td><td class="num">${esc(b.result)}</td><td>${esc(b.comparison || '')}</td><td class="num" style="color:var(--muted-soft);">${esc(b.page || '')}</td></tr>`).join('')}
+          </tbody>
+        </table>`;
+    }
+    if (Array.isArray(tt.tradeoffs) && tt.tradeoffs.length) {
+      bits += `<div class="ui text-xs uppercase tracking-wider text-muted mb-4" style="letter-spacing:0.08em; margin-top:24px;">工程取舍</div>
+        ${tt.tradeoffs.map(t => `
+          <div class="premise"><div class="premise-point">${esc(t.decision)}</div><div class="premise-explanation">${esc(t.rationale)}</div></div>`).join('')}`;
+    }
+    if (Array.isArray(tt.whats_not_said) && tt.whats_not_said.length) {
+      bits += `<div class="warn-box"><div class="label">报告没说的</div><ul>${tt.whats_not_said.map(w => `<li>${esc(w)}</li>`).join('')}</ul></div>`;
+    }
+    typeHTML = section('tech-report', '技术报告拆解', bits,
+      { subhead: '技术报告不经同行评审：说了的基本真，没说的才是问题。' });
+  }
+
+  // ---- broker_research ----
+  const tb = data._type_broker_research;
+  if (tb) {
+    let bits = '';
+    const ratingItems = [
+      tb.rating && `<div class="rating-item"><div class="rlabel">评级</div><div class="rvalue accent">${esc(tb.rating)}</div></div>`,
+      tb.target_price && `<div class="rating-item"><div class="rlabel">目标价</div><div class="rvalue mono">${esc(tb.target_price)}</div></div>`,
+      tb.current_price && `<div class="rating-item"><div class="rlabel">现价</div><div class="rvalue mono" style="font-size:20px; color:var(--fg-secondary);">${esc(tb.current_price)}</div></div>`,
+      tb.upside && `<div class="rating-item"><div class="rlabel">隐含空间</div><div class="rvalue mono ${signClass(tb.upside)}">${esc(tb.upside)}</div></div>`,
+      tb.horizon && `<div class="rating-item"><div class="rlabel">期限</div><div class="rvalue" style="font-size:18px; color:var(--fg-secondary);">${esc(tb.horizon)}</div></div>`,
+    ].filter(Boolean).join('');
+    if (ratingItems) bits += `<div class="rating-box">${ratingItems}</div>`;
+    if (tb.thesis) {
+      bits += `<div class="mental-block" style="margin-top:32px;">
+        <div class="mental-name">投资逻辑链</div>
+        ${tb.thesis.summary ? `<div class="mental-description">${esc(tb.thesis.summary)}</div>` : ''}
+        ${tb.thesis.mermaid ? `<div class="mermaid-frame"><div class="mermaid">${esc(tb.thesis.mermaid)}</div></div><div class="mermaid-caption">图：投资逻辑链 · 每一环对应下方一个关键假设</div>` : ''}
+      </div>`;
+    }
+    if (Array.isArray(tb.key_assumptions) && tb.key_assumptions.length) {
+      bits += `<div class="ui text-xs uppercase tracking-wider text-muted mb-4" style="letter-spacing:0.08em;">关键假设 · 目标价拆解</div>
+        ${tb.key_assumptions.map(a => `
+          <div class="evidence-card">
+            <div class="evidence-claim">${esc(a.assumption)}
+              ${a.confidence ? `<span class="strength-badge strength-${esc(a.confidence)}">${({strong:'依据强',moderate:'依据中',weak:'依据弱'})[a.confidence] || esc(a.confidence)}</span>` : ''}
+            </div>
+            ${a.basis ? `<div class="evidence-detail"><b>依据：</b>${esc(a.basis)}</div>` : ''}
+            ${a.risk_if_wrong ? `<div class="evidence-detail" style="color:var(--red);"><b>若不成立：</b>${esc(a.risk_if_wrong)}</div>` : ''}
+          </div>`).join('')}`;
+    }
+    if (Array.isArray(tb.earnings_forecast) && tb.earnings_forecast.length) {
+      bits += `<div class="ui text-xs uppercase tracking-wider text-muted mb-3" style="letter-spacing:0.08em; margin-top:24px;">盈利预测</div>
+        <table class="data-table">
+          <thead><tr><th>年份</th><th>营收</th><th>同比</th><th>归母净利</th><th>同比</th><th>PE</th></tr></thead>
+          <tbody>${tb.earnings_forecast.map(f => `
+            <tr><td class="num">${esc(f.year)}</td><td class="num">${esc(f.revenue || '')}</td>
+            <td class="num ${signClass(f.yoy)}">${esc(f.yoy || '')}</td><td class="num">${esc(f.net_profit || '')}</td>
+            <td class="num ${signClass(f.profit_yoy)}">${esc(f.profit_yoy || '')}</td><td class="num">${esc(f.pe || '')}</td></tr>`).join('')}
+          </tbody>
+        </table>`;
+    }
+    if (tb.valuation) {
+      const v = tb.valuation;
+      bits += `<div class="info-box"><div class="label">估值方法</div>
+        <div class="ui text-sm" style="color:var(--fg-secondary); line-height:1.7;">
+          ${v.method ? `<b>${esc(v.method)}</b> · ` : ''}${esc(v.detail || '')}
+          ${v.vs_peers ? `<br><b>可比公司：</b>${esc(v.vs_peers)}` : ''}
+        </div></div>`;
+    }
+    if (Array.isArray(tb.catalysts) && tb.catalysts.length) {
+      bits += `<div class="ui text-xs uppercase tracking-wider text-muted mb-2" style="letter-spacing:0.08em; margin-top:24px;">催化剂</div>
+        <div>${tb.catalysts.map(c => `<div class="quickstart-item"><span class="check">⚡</span><span>${esc(c)}</span></div>`).join('')}</div>`;
+    }
+    if (Array.isArray(tb.risks) && tb.risks.length) {
+      bits += `<div class="ui text-xs uppercase tracking-wider text-muted mb-2" style="letter-spacing:0.08em; margin-top:24px;">风险（报告自列）</div>
+        <div>${tb.risks.map(rk => `
+          <div class="quickstart-item"><span class="dot dot-${rk.severity === 'high' ? 'red' : rk.severity === 'medium' ? 'yellow' : 'info'}" style="margin-top:7px;"></span><span>${esc(rk.risk)}</span></div>`).join('')}</div>`;
+    }
+    if (tb.bias_check) {
+      bits += `<div class="warn-box"><div class="label">卖方偏差提醒（分析者注）</div><div class="body">${esc(tb.bias_check)}</div></div>`;
+    }
+    typeHTML = section('broker', '研报拆解', bits,
+      { subhead: '事实和数据可以用，观点和目标价要打折 — 评级四件套、逻辑链、关键假设、偏差提醒。' });
+  }
+
+  // ---- earnings ----
+  const te = data._type_earnings;
+  if (te) {
+    let bits = '';
+    if (te.period) {
+      bits += `<div class="ui text-sm text-muted mb-4">报告期：<b style="color:var(--fg);">${esc(te.period)}</b></div>`;
+    }
+    if (Array.isArray(te.snapshot) && te.snapshot.length) {
+      bits += `<table class="data-table">
+        <thead><tr><th>指标</th><th>本期</th><th>同比</th><th>备注</th></tr></thead>
+        <tbody>${te.snapshot.map(s => `
+          <tr><td>${esc(s.metric)}</td><td class="num" style="font-weight:700;">${esc(s.value)}</td>
+          <td class="num ${signClass(s.yoy)}">${esc(s.yoy || '')}</td><td class="ui text-xs" style="color:var(--muted);">${esc(s.note || '')}</td></tr>`).join('')}
+        </tbody>
+      </table>`;
+    }
+    if (Array.isArray(te.segments) && te.segments.length) {
+      bits += `<div class="ui text-xs uppercase tracking-wider text-muted mb-3" style="letter-spacing:0.08em; margin-top:28px;">分部表现</div>
+        <table class="data-table">
+          <thead><tr><th>分部</th><th>营收</th><th>同比</th><th>占比</th><th>点评</th></tr></thead>
+          <tbody>${te.segments.map(s => `
+            <tr><td>${esc(s.name)}</td><td class="num">${esc(s.revenue)}</td>
+            <td class="num ${signClass(s.yoy)}">${esc(s.yoy || '')}</td><td class="num">${esc(s.share || '')}</td>
+            <td class="ui text-xs" style="color:var(--muted);">${esc(s.comment || '')}</td></tr>`).join('')}
+          </tbody>
+        </table>`;
+    }
+    if (Array.isArray(te.drivers) && te.drivers.length) {
+      bits += `<div class="ui text-xs uppercase tracking-wider text-muted mb-4" style="letter-spacing:0.08em; margin-top:28px;">驱动因素</div>
+        ${te.drivers.map(d => `
+          <div class="premise" style="border-left-color: ${d.direction === 'down' ? 'var(--red)' : 'var(--green)'};">
+            <div class="premise-point">${d.direction === 'down' ? '↓' : '↑'} ${esc(d.driver)}</div>
+            <div class="premise-explanation">${esc(d.detail)}</div>
+          </div>`).join('')}`;
+    }
+    if (te.guidance) {
+      bits += `<div class="application-callout"><div class="label">管理层指引</div><div>${esc(te.guidance)}</div></div>`;
+    }
+    if (te.management_tone) {
+      bits += `<div class="info-box"><div class="label">叙事 vs 数字</div><div class="ui text-sm" style="color:var(--fg-secondary); line-height:1.7;">${esc(te.management_tone)}</div></div>`;
+    }
+    if (Array.isArray(te.fine_print) && te.fine_print.length) {
+      bits += `<div class="ui text-xs uppercase tracking-wider text-muted mb-2" style="letter-spacing:0.08em; margin-top:28px;">小字里的发现（附注/风险因素）</div>
+        <div>${te.fine_print.map(f => `
+          <div class="quickstart-item">
+            <span class="dot dot-${esc(f.severity || 'info')}"></span>
+            <span><b>${esc(f.find)}</b>${f.why_it_matters ? ` — ${esc(f.why_it_matters)}` : ''}${pageRef(f.page)}</span>
+          </div>`).join('')}</div>`;
+    }
+    typeHTML = section('earnings', '财报拆解', bits,
+      { subhead: '数字基本可信，叙事是管理层写的软文 — 抓数字、抓变化、抓小字。' });
+  }
+
+  // ---- deep_article ----
+  const ta = data._type_deep_article;
+  if (ta) {
+    let bits = '';
+    if (ta.thesis) {
+      bits += `<div class="application-callout" style="margin-bottom:24px;"><div class="label">核心主张</div><div style="font-family:var(--serif); font-size:18px; font-weight:600; line-height:1.5;">${esc(ta.thesis)}</div></div>`;
+    }
+    if (ta.argument_chain) {
+      bits += `<div class="mental-block">
+        <div class="mental-name">论证链</div>
+        ${ta.argument_chain.summary ? `<div class="mental-description">${esc(ta.argument_chain.summary)}</div>` : ''}
+        ${ta.argument_chain.mermaid ? `<div class="mermaid-frame"><div class="mermaid">${esc(ta.argument_chain.mermaid)}</div></div><div class="mermaid-caption">图：从问题到结论的论证路径</div>` : ''}
+      </div>`;
+    }
+    if (Array.isArray(ta.key_points) && ta.key_points.length) {
+      const ST = { firsthand: ['一手经验', 'strong'], cited: ['引用', 'moderate'], speculation: ['推测', 'weak'] };
+      bits += `<div class="ui text-xs uppercase tracking-wider text-muted mb-4" style="letter-spacing:0.08em;">主要论点 · 各自的支撑</div>
+        ${ta.key_points.map(k => {
+          const st = ST[k.support_type];
+          return `<div class="evidence-card">
+            <div class="evidence-claim">${esc(k.point)}
+              ${st ? `<span class="strength-badge strength-${st[1]}">${st[0]}</span>` : ''}
+              ${pageRef(k.page)}
+            </div>
+            ${k.support ? `<div class="evidence-detail">${esc(k.support)}</div>` : ''}
+          </div>`;
+        }).join('')}`;
+    }
+    if (ta.author_stance) {
+      bits += `<div class="info-box"><div class="label">作者立场（分析者注）</div><div class="ui text-sm" style="color:var(--fg-secondary); line-height:1.7;">${esc(ta.author_stance)}</div></div>`;
+    }
+    if (Array.isArray(ta.practical_takeaways) && ta.practical_takeaways.length) {
+      bits += `<div class="ui text-xs uppercase tracking-wider text-muted mb-2" style="letter-spacing:0.08em; margin-top:24px;">可直接上手的</div>
+        <div>${ta.practical_takeaways.map(t => `<div class="quickstart-item"><span class="check">⚒</span><span>${esc(t)}</span></div>`).join('')}</div>`;
+    }
+    typeHTML = section('deep-article', '长文拆解', bits,
+      { subhead: '无同评无监管 — 可信度取决于作者是谁、立场在哪。主张和支撑分开看。' });
+  }
+
+  // ===== Reading map =====
+  let rmapHTML = '';
+  if (Array.isArray(data.reading_map) && data.reading_map.length) {
+    const V = { deep: '精读', skim: '略读', skip: '跳过' };
+    rmapHTML = section('reading-map', '原文导读地图',
+      `<div>${data.reading_map.map(s => `
+        <div class="rmap-item">
+          <span class="rmap-pages">${esc(s.pages)}</span>
+          <span class="rmap-verdict v-${esc(s.verdict)}">${V[s.verdict] || esc(s.verdict)}</span>
+          <div class="rmap-body">
+            <div class="rmap-section">${esc(s.section)}</div>
+            ${s.summary ? `<div class="rmap-summary">${esc(s.summary)}</div>` : ''}
+            ${s.why ? `<div class="rmap-why">${esc(s.why)}</div>` : ''}
+          </div>
+        </div>`).join('')}</div>`,
+      { subhead: '要回原文时按这张地图跳读，不要从第一页开始。' });
+  }
+
+  // ===== Unfamiliar mode =====
+  let unfamiliarHTML = '';
+  const u = data._unfamiliar_mode;
+  if (u && meta.mode === 'unfamiliar') {
+    let bits = '';
+    if (Array.isArray(u.basics) && u.basics.length) {
+      bits += section('basics', '基础共识',
+        `<div class="space-y-0">${u.basics.map(b => `
+          <div class="premise">
+            <div class="premise-point">${esc(b.point)}</div>
+            <div class="premise-explanation">${esc(b.explanation)}</div>
+          </div>`).join('')}</div>`,
+        { subhead: '读懂这份文档需要的领域前提。读完应该没有「这是什么」的问题。' });
+    }
+    if (Array.isArray(u.mental_models) && u.mental_models.length) {
+      bits += section('mental-models', '心智模型',
+        u.mental_models.map((m, i) => `
+          <div class="mental-block">
+            <div class="mental-name">${String(i+1).padStart(2,'0')} · ${esc(m.name)}</div>
+            <div class="mental-description">${esc(m.description)}</div>
+            ${m.mermaid ? `<div class="mermaid-frame"><div class="mermaid">${esc(m.mermaid)}</div></div><div class="mermaid-caption">图：${esc(m.name)}</div>` : ''}
+            ${m.how_to_apply ? `<div class="application-callout"><div class="label">如何应用</div><div>${esc(m.how_to_apply)}</div></div>` : ''}
+          </div>`).join(''),
+        { subhead: '理解这份文档的思维框架 · 用图说话。' });
+    }
+    if (Array.isArray(u.playbooks) && u.playbooks.length) {
+      bits += section('playbooks', '执行手册',
+        u.playbooks.map(p => `
+          <div class="playbook-block">
+            <div class="playbook-name">${esc(p.name)}</div>
+            ${p.when_to_use ? `<div class="playbook-when">何时用：${esc(p.when_to_use)}</div>` : ''}
+            <ol class="step-list">${(p.steps||[]).map(s => `
+              <li class="step-item"><div class="step-title">${esc(s.title)}</div><div class="step-detail">${esc(s.detail)}</div></li>`).join('')}</ol>
+            ${Array.isArray(p.pitfalls) && p.pitfalls.length ? `
+              <div class="warn-box"><div class="label">常见坑</div><ul>${p.pitfalls.map(pt => `<li>${esc(pt)}</li>`).join('')}</ul></div>` : ''}
+          </div>`).join(''),
+        { subhead: '文档里可照做的流程 · 含适用场景和坑。' });
+    }
+    if (Array.isArray(u.quick_start) && u.quick_start.length) {
+      bits += section('quickstart', '快速应用',
+        `<div>${u.quick_start.map(q => `
+          <div class="quickstart-item"><span class="check">✓</span><span>${esc(q)}</span></div>`).join('')}</div>`,
+        { subhead: '读完下周可以立刻做的事 · 具体到一个动作。' });
+    }
+    unfamiliarHTML = bits;
+  }
+
+  // ===== Familiar mode =====
+  let familiarHTML = '';
+  const f = data._familiar_mode;
+  if (f && meta.mode === 'familiar') {
+    let bits = '';
+    if (Array.isArray(f.increments) && f.increments.length) {
+      bits += section('increments', '增量信息',
+        f.increments.map(i => `
+          <div class="premise">
+            <div class="premise-point">${esc(i.fact)} ${pageRef(i.page)}</div>
+            <div class="premise-explanation"><span class="label-pill" style="display:inline;">为什么新</span> ${esc(i.why_new)}</div>
+          </div>`).join(''),
+        { subhead: '新数据、新口径、首次披露 · 标注「为什么对行内人是新的」。' });
+    }
+    if (Array.isArray(f.new_takes) && f.new_takes.length) {
+      bits += section('new-takes', '新观点',
+        f.new_takes.map(t => `
+          <div class="premise">
+            <div class="premise-point">${esc(t.take)}</div>
+            <div class="premise-explanation"><span class="label-pill" style="display:inline;">vs 主流</span> ${esc(t.vs_mainstream)}</div>
+          </div>`).join(''),
+        { subhead: '反共识或少见角度的看法。' });
+    }
+    if (Array.isArray(f.insights) && f.insights.length) {
+      bits += section('insights', '启发',
+        f.insights.map(i => `
+          <div class="premise" style="border-left-color: var(--accent);">
+            <div class="premise-point">💡 ${esc(i.insight)}</div>
+            ${i.implications ? `<div class="premise-explanation">${esc(i.implications)}</div>` : ''}
+          </div>`).join(''));
+    }
+    if (Array.isArray(f.tensions) && f.tensions.length) {
+      bits += section('tensions', '冲突点',
+        f.tensions.map(t => `
+          <div class="playbook-block">
+            <div class="playbook-name">${esc(t.point)}</div>
+            <div class="grid md:grid-cols-2 gap-4 mt-4">
+              <div class="p-4 rounded" style="background: var(--border-soft);">
+                <span class="label-pill">原有认知</span>
+                <div class="text-sm" style="color: var(--fg-secondary);">${esc(t.your_prior)}</div>
+              </div>
+              <div class="p-4 rounded" style="background: var(--accent-bg);">
+                <span class="label-pill">文档观点</span>
+                <div class="text-sm">${esc(t.doc_view)}</div>
+              </div>
+            </div>
+          </div>`).join(''));
+    }
+    if (Array.isArray(f.open_questions) && f.open_questions.length) {
+      bits += section('open-questions', '待深挖问题',
+        `<div>${f.open_questions.map(q => `
+          <div class="quickstart-item"><span class="check">?</span><span>${esc(q)}</span></div>`).join('')}</div>`);
+    }
+    familiarHTML = bits;
+  }
+
+  // ===== Critical lens =====
+  let lensHTML = '';
+  const cl = data.critical_lens;
+  if (cl && ((cl.strengths||[]).length || (cl.weaknesses||[]).length || (cl.what_to_verify||[]).length)) {
+    let bits = '';
+    if ((cl.strengths||[]).length || (cl.weaknesses||[]).length) {
+      bits += `<div class="lens-grid">
+        <div class="lens-col" style="border-top: 3px solid var(--green);">
+          <div class="ltitle" style="color: var(--green);">做得扎实的</div>
+          <ul>${(cl.strengths||[]).map(s => `<li>${esc(s)}</li>`).join('')}</ul>
+        </div>
+        <div class="lens-col" style="border-top: 3px solid var(--red);">
+          <div class="ltitle" style="color: var(--red);">薄弱的</div>
+          <ul>${(cl.weaknesses||[]).map(w => `<li>${esc(w)}</li>`).join('')}</ul>
+        </div>
+      </div>`;
+    }
+    if ((cl.what_to_verify||[]).length) {
+      bits += `<div class="ui text-xs uppercase tracking-wider text-muted mb-2" style="letter-spacing:0.08em; margin-top:28px;">采用结论前，先验证这些</div>
+        <div>${cl.what_to_verify.map(v => `
+          <div class="quickstart-item"><span class="check">🔍</span>
+            <span><b>${esc(v.item)}</b>${v.how ? `<br><span class="ui text-sm" style="color:var(--muted);">怎么验：${esc(v.how)}</span>` : ''}</span>
+          </div>`).join('')}</div>`;
+    }
+    lensHTML = section('critical-lens', '批判性阅读', bits,
+      { subhead: '这份文档哪里扎实、哪里薄弱、用它的结论前该验证什么 — 分析者视角，不是文档的话。' });
+  }
+
+  // ===== The one insight (带走一句) =====
+  let insightHTML = '';
+  if (data.the_one_insight) {
+    insightHTML = section('one-insight', '带走一句',
+      `<div class="insight-hero">
+        <div class="ilabel">如果整份报告只记一句话</div>
+        <div class="itext">${esc(data.the_one_insight)}</div>
+      </div>`,
+      { subhead: '蒸馏，不是压缩 — 离开这份文档它也该单独成立。' });
+  }
+
+  // ===== Quotes =====
+  let quotesHTML = '';
+  if (Array.isArray(data.quotes) && data.quotes.length) {
+    quotesHTML = section('quotes', '原文金句',
+      data.quotes.slice(0, 5).map(q => `
+        <div class="pullquote">
+          <div class="pullquote-text">${esc(q.text)}</div>
+          <div class="pullquote-attribution ui">${q.page ? `📍 <span class="mono">${esc(q.page)}</span>` : ''}</div>
+          ${q.note ? `<div class="pullquote-note">${esc(q.note)}</div>` : ''}
+        </div>`).join(''),
+      { subhead: '原文照抄 · 选「脱离上下文也成立」的句子。' });
+  }
+
+  // ===== References =====
+  let referencesHTML = '';
+  const refs = data.references || {};
+  const glossary = refs.glossary || [];
+  const furtherReading = refs.further_reading || [];
+  if (glossary.length || furtherReading.length) {
+    let inner = '';
+    if (glossary.length) {
+      inner += `<div class="mb-8">
+        <div class="ui text-xs uppercase tracking-wider text-muted mb-3" style="letter-spacing: 0.08em;">术语表</div>
+        <div>${glossary.map(g => `
+          <div class="glossary-row">
+            <div class="glossary-term">${esc(g.term)}</div>
+            <div class="glossary-definition">${esc(g.definition)}</div>
+          </div>`).join('')}</div>
+      </div>`;
+    }
+    if (furtherReading.length) {
+      inner += `<div>
+        <div class="ui text-xs uppercase tracking-wider text-muted mb-3" style="letter-spacing: 0.08em;">延伸阅读</div>
+        <div>${furtherReading.map(r => `
+          <div class="reading-item">
+            <span class="reading-type">${esc(r.type)}</span>
+            <div><div class="reading-name">${esc(r.name)}</div>
+            ${r.note ? `<div class="reading-note">${esc(r.note)}</div>` : ''}</div>
+          </div>`).join('')}</div>
+      </div>`;
+    }
+    referencesHTML = section('references', '参考资料', inner, { subhead: '术语表 + 延伸阅读 · 末尾参考用。' });
+  }
+
+  root.innerHTML = heroHTML + tldrHTML + narrativeHTML + knHTML + questionsHTML + typeHTML + rmapHTML
+    + unfamiliarHTML + familiarHTML + lensHTML + insightHTML + quotesHTML + referencesHTML;
+
+  tocEl.innerHTML = sections.map((s, i) => `
+    <a href="#${s.id}" class="toc-link">
+      <span class="mono text-muted" style="font-size: 11px;">${String(i+1).padStart(2,'0')}</span>
+      &nbsp;${esc(s.label)}
+    </a>`).join('');
+
+  renderFlowcharts(root);
+
+  const links = Array.from(tocEl.querySelectorAll('a'));
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + e.target.id));
+      }
+    });
+  }, { rootMargin: '-30% 0px -60% 0px' });
+  document.querySelectorAll('section[id]').forEach(s => observer.observe(s));
+
+  // ====== 流程图渲染器:flowchart 源码 → 卡片 + SVG 箭头(替代 mermaid) ======
+  function renderFlowcharts(scope) {
+    (scope || document).querySelectorAll('.mermaid').forEach(function (host) {
+      if (host.dataset.fcDone) return;
+      const src = host.textContent || '';
+      const head = src.trim().split('\n')[0].trim();
+      if (!/^(flowchart|graph)\s+/i.test(head)) return; // 只处理流程图,其它原样留着
+      const g = fcParse(src);
+      if (!g || g.order.length === 0) return;
+      host.dataset.fcDone = '1';
+      fcDraw(host, g);
+    });
+  }
+
+  function fcParse(src) {
+    const lines = src.trim().split('\n');
+    let dir = 'TD';
+    const nodes = {}, order = [], edges = [];
+    function tok(t) {
+      t = t.trim();
+      const m = t.match(/^([A-Za-z0-9_]+)\s*(?:\[([^\]]*)\]|\{([^}]*)\}|\(([^)]*)\))?$/);
+      if (!m) return null;
+      const id = m[1];
+      const label = (m[2] != null ? m[2] : m[3] != null ? m[3] : m[4]);
+      const shape = m[3] != null ? 'decision' : 'rect';
+      if (!nodes[id]) { nodes[id] = { id: id, label: label || id, shape: shape }; order.push(id); }
+      else if (label) { nodes[id].label = label; if (shape === 'decision') nodes[id].shape = 'decision'; }
+      return id;
+    }
+    lines.forEach(function (raw) {
+      const line = raw.trim();
+      if (!line) return;
+      const fm = line.match(/^(?:flowchart|graph)\s+(TD|TB|LR|RL)/i);
+      if (fm) { dir = fm[1].toUpperCase(); return; }
+      const em = line.match(/^(.+?)\s*--+>\s*(?:\|([^|]*)\|\s*)?(.+)$/);
+      if (em) { const a = tok(em[1]); const b = tok(em[3]); if (a && b) edges.push({ a: a, b: b, lbl: (em[2] || '').trim() }); }
+      else { tok(line); }
+    });
+    return { dir: dir === 'TB' ? 'TD' : dir, nodes: nodes, order: order, edges: edges };
+  }
+
+  function fcLayers(g) {
+    const L = {}; g.order.forEach(function (id) { L[id] = 0; });
+    let changed = true, guard = 0;
+    while (changed && guard++ < 300) {
+      changed = false;
+      g.edges.forEach(function (e) { if (L[e.b] < L[e.a] + 1) { L[e.b] = L[e.a] + 1; changed = true; } });
+    }
+    const layers = [];
+    g.order.forEach(function (id) { (layers[L[id]] = layers[L[id]] || []).push(id); });
+    return layers;
+  }
+
+  function fcDraw(host, g) {
+    const lr = (g.dir === 'LR' || g.dir === 'RL');
+    const layers = fcLayers(g);
+    host.textContent = '';
+    host.style.position = 'relative';
+    host.style.width = '100%';
+    const SVGNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(SVGNS, 'svg');
+    svg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;overflow:visible';
+    const mid = 'fcah' + Math.random().toString(36).slice(2);
+    const defs = document.createElementNS(SVGNS, 'defs');
+    defs.innerHTML = '<marker id="' + mid + '" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="context-stroke"/></marker>';
+    svg.appendChild(defs);
+    host.appendChild(svg);
+
+    const flow = document.createElement('div');
+    flow.style.cssText = 'position:relative;z-index:1;display:flex;gap:' + (lr ? '48px' : '32px') + ';' +
+      (lr ? 'flex-direction:row;align-items:center' : 'flex-direction:column;align-items:stretch');
+    const el = {};
+    layers.forEach(function (layer) {
+      const band = document.createElement('div');
+      band.style.cssText = 'display:flex;gap:18px;justify-content:center;flex-wrap:wrap;' + (lr ? 'flex-direction:column' : 'flex-direction:row');
+      (layer || []).forEach(function (id) {
+        const n = g.nodes[id];
+        const dec = n.shape === 'decision';
+        const card = document.createElement('div');
+        card.style.cssText = 'box-sizing:border-box;width:' + (lr ? '160px' : '200px') + ';padding:11px 14px;border-radius:' +
+          (dec ? '13px' : '10px') + ';font-size:13.5px;line-height:1.5;background:' + (dec ? 'var(--accent-bg)' : 'var(--bg-card)') +
+          ';color:var(--fg);border:1px solid ' + (dec ? 'var(--accent)' : 'var(--border)') + ';' +
+          (dec ? '' : 'border-left:3px solid var(--accent);') +
+          'box-shadow:0 1px 2px rgba(0,0,0,.04),0 8px 18px -12px rgba(0,0,0,.22);text-align:' + (dec ? 'center' : 'left') + ';white-space:normal';
+        card.innerHTML = (dec ? '<div style="font:600 10px var(--sans);letter-spacing:.1em;color:var(--accent);opacity:.85;margin-bottom:3px">判断</div>' : '') +
+          fcEsc(n.label).replace(/&lt;br\s*\/?&gt;/gi, '<br>');
+        band.appendChild(card);
+        el[id] = card;
+      });
+      flow.appendChild(band);
+    });
+    host.appendChild(flow);
+
+    function draw() {
+      const hb = host.getBoundingClientRect();
+      if (!hb.width) return;
+      svg.setAttribute('viewBox', '0 0 ' + hb.width + ' ' + hb.height);
+      Array.prototype.forEach.call(svg.querySelectorAll('.fce'), function (n) { n.remove(); });
+      g.edges.forEach(function (e) {
+        const A = el[e.a], B = el[e.b]; if (!A || !B) return;
+        const a = A.getBoundingClientRect(), b = B.getBoundingClientRect();
+        let x1, y1, x2, y2, d;
+        if (lr) { x1 = a.right - hb.left; y1 = a.top + a.height / 2 - hb.top; x2 = b.left - hb.left; y2 = b.top + b.height / 2 - hb.top; const mx = (x1 + x2) / 2; d = 'M' + x1 + ',' + y1 + ' C' + mx + ',' + y1 + ' ' + mx + ',' + y2 + ' ' + (x2 - 2) + ',' + y2; }
+        else { x1 = a.left + a.width / 2 - hb.left; y1 = a.bottom - hb.top; x2 = b.left + b.width / 2 - hb.left; y2 = b.top - hb.top; const my = (y1 + y2) / 2; d = 'M' + x1 + ',' + y1 + ' C' + x1 + ',' + my + ' ' + x2 + ',' + my + ' ' + x2 + ',' + (y2 - 2); }
+        const p = document.createElementNS(SVGNS, 'path');
+        p.setAttribute('class', 'fce'); p.setAttribute('d', d); p.setAttribute('fill', 'none');
+        p.style.stroke = 'var(--muted-soft)'; p.setAttribute('stroke-width', '1.7'); p.setAttribute('marker-end', 'url(#' + mid + ')');
+        svg.appendChild(p);
+        if (e.lbl) {
+          const mx = (x1 + x2) / 2, my = (y1 + y2) / 2, tw = e.lbl.length * 13 + 14;
+          const r = document.createElementNS(SVGNS, 'rect');
+          r.setAttribute('class', 'fce'); r.setAttribute('x', mx - tw / 2); r.setAttribute('y', my - 11); r.setAttribute('width', tw); r.setAttribute('height', 21); r.setAttribute('rx', 10);
+          r.style.fill = 'var(--bg)'; r.style.stroke = 'var(--border)';
+          const t = document.createElementNS(SVGNS, 'text');
+          t.setAttribute('class', 'fce'); t.setAttribute('x', mx); t.setAttribute('y', my + 4); t.setAttribute('text-anchor', 'middle'); t.setAttribute('font-size', '12.5');
+          t.style.fill = 'var(--muted)'; t.setAttribute('font-family', 'var(--sans)'); t.textContent = e.lbl;
+          svg.appendChild(r); svg.appendChild(t);
+        }
+      });
+    }
+    requestAnimationFrame(function () { requestAnimationFrame(draw); });
+    if (window.ResizeObserver) { new ResizeObserver(function () { requestAnimationFrame(draw); }).observe(host); }
+    window.addEventListener('resize', draw);
+  }
+
+  function fcEsc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
+</script>
+
+<script>
+(function(){
+var p=document.getElementById('mtprog'),tb=document.getElementById('mttoc'),
+    tp=document.getElementById('mttop'),sh=document.getElementById('mtsheet'),
+    ln=document.getElementById('mtlinks');
+function onScroll(){
+  var d=document.documentElement,m=d.scrollHeight-window.innerHeight,y=window.scrollY;
+  p.style.width=(m>0?Math.min(100,y/m*100):0)+'%';
+  tp.classList.toggle('show',y>600);
+  document.documentElement.classList.toggle('mt-scrolled',y>80);
+}
+window.addEventListener('scroll',onScroll,{passive:true});onScroll();
+tp.addEventListener('click',function(){window.scrollTo({top:0,behavior:'smooth'})});
+function fill(){
+  ln.innerHTML='';var seen={};
+  var as=document.querySelectorAll('#toc a[href^="#"], nav a[href^="#"]');
+  for(var i=0;i<as.length;i++){
+    var a=as[i],h=a.getAttribute('href');
+    if(!h||h==='#'||h==='#top'||seen[h])continue;
+    if(!document.getElementById(h.slice(1)))continue;
+    seen[h]=1;
+    var b=document.createElement('a');b.href=h;
+    b.textContent=a.textContent.replace(/\s+/g,' ').trim();
+    b.addEventListener('click',function(){sh.hidden=true});
+    ln.appendChild(b);
+  }
+  if(!ln.children.length){
+    var b2=document.createElement('a');b2.href='#top';b2.textContent='回到顶部';
+    b2.addEventListener('click',function(){sh.hidden=true});ln.appendChild(b2);
+  }
+}
+tb.addEventListener('click',function(){fill();sh.hidden=false});
+sh.addEventListener('click',function(e){if(e.target===sh)sh.hidden=true});
+document.getElementById('mtclose').addEventListener('click',function(){sh.hidden=true});
+function polish(){
+  document.querySelectorAll('a').forEach(function(a){
+    if(a.textContent.replace(/\s+/g,' ').trim()===('AI Podcast '+'Listener')){
+      a.textContent='Valley Beacon 深读';
+      a.setAttribute('aria-label','Valley Beacon 深读');
+    }
+  });
+  var raw=document.getElementById('report-data');
+  if(!raw) return;
+  var data;
+  try{data=JSON.parse(raw.textContent)}catch(e){return}
+  var meta=data.meta||{};
+  if(!meta.original_title||meta.original_title===meta.title) return;
+  function insertOriginal(){
+    if(document.querySelector('.mt-original-title')) return;
+    var h=document.querySelector('.hero-title,h1');
+    if(!h) return;
+    var p=document.createElement('p');
+    p.className='mt-original-title';
+    p.textContent=meta.original_title;
+    h.insertAdjacentElement('afterend',p);
+  }
+  insertOriginal();
+  requestAnimationFrame(insertOriginal);
+  setTimeout(insertOriginal,300);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',polish);
+else polish();
+})();
+</script>
+</body>
+</html>

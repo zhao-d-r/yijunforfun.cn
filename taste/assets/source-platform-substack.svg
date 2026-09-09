@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Substack">
+  <defs>
+    <linearGradient id="bg" x1="80" y1="36" x2="430" y2="486" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff8a3d"/>
+      <stop offset=".55" stop-color="#ff6719"/>
+      <stop offset="1" stop-color="#a93a12"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="104" fill="url(#bg)"/>
+  <g fill="#fff7ef">
+    <rect x="142" y="102" width="228" height="34" rx="7"/>
+    <rect x="142" y="168" width="228" height="34" rx="7"/>
+    <path d="M142 236h228v155L256 326 142 391Z"/>
+  </g>
+  <text x="256" y="452" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="49" font-weight="850" fill="#fff7ef">Substack</text>
+</svg>

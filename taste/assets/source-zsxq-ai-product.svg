@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="AI产品经理大本营">
+  <defs>
+    <linearGradient id="bg" x1="70" y1="36" x2="442" y2="488" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1176f2"/>
+      <stop offset="0.62" stop-color="#1267d7"/>
+      <stop offset="1" stop-color="#0846a6"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="32%" cy="18%" r="82%">
+      <stop offset="0" stop-color="#61c8ff" stop-opacity="0.54"/>
+      <stop offset="0.56" stop-color="#1e78ef" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <rect width="512" height="512" rx="96" fill="url(#glow)"/>
+  <path d="M68 151H45v-24h63l22 24h85" fill="none" stroke="#d8edff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
+  <path d="M444 151h23v-24h-63l-22 24h-85" fill="none" stroke="#d8edff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
+  <text x="256" y="236" text-anchor="middle" fill="#ffffff" font-size="76" font-weight="800" font-family="-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif">AI产品经理</text>
+  <line x1="110" y1="296" x2="174" y2="296" stroke="#d8edff" stroke-width="10" stroke-linecap="round" opacity="0.9"/>
+  <line x1="338" y1="296" x2="402" y2="296" stroke="#d8edff" stroke-width="10" stroke-linecap="round" opacity="0.9"/>
+  <text x="256" y="322" text-anchor="middle" fill="#ffffff" font-size="58" font-weight="750" font-family="-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif">大本营</text>
+  <rect x="26" y="26" width="460" height="460" rx="78" fill="none" stroke="#ffffff" stroke-width="3" opacity="0.16"/>
+</svg>

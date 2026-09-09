@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anthropic 联创 Ben Mann：AGI 时间线、离开 OpenAI、对齐安全</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- 自绘流程图渲染器(见 renderFlowcharts):读 .mermaid 里的 flowchart 源码,
+     解析→分层布局→卡片+SVG 箭头。不再加载 mermaid CDN(更好看 + 去掉 loose XSS 面)。 -->
+<style>
+  /* ====== Claude-inspired design tokens (与 ai-podcast-listener 同族) ====== */
+  :root {
+    --bg: #fafaf7;
+    --bg-card: #ffffff;
+    --fg: #1c1917;
+    --fg-secondary: #44403c;
+    --muted: #78716c;
+    --muted-soft: #a8a29e;
+    --accent: #B45309;
+    --accent-bg: #fef3c7;
+    --border: #e7e5e4;
+    --border-soft: #f5f5f4;
+    --green: #15803d;
+    --red: #dc2626;
+    --yellow: #ca8a04;
+    --serif: 'Charter', 'Iowan Old Style', 'PingFang SC', 'Noto Serif SC', Georgia, serif;
+    --sans: ui-sans-serif, system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  }
+  html.dark {
+    --bg: #0c0a09;
+    --bg-card: #1c1917;
+    --fg: #f5f5f4;
+    --fg-secondary: #d6d3d1;
+    --muted: #a8a29e;
+    --muted-soft: #78716c;
+    --accent: #fbbf24;
+    --accent-bg: #422006;
+    --border: #292524;
+    --border-soft: #1c1917;
+    --green: #4ade80;
+    --red: #f87171;
+    --yellow: #facc15;
+  }
+  html, body { background: var(--bg); color: var(--fg); }
+  body {
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.75;
+    font-feature-settings: "kern", "liga", "calt";
+  }
+  .ui { font-family: var(--sans); }
+  .mono { font-family: var(--mono); font-feature-settings: "tnum"; }
+  .text-muted { color: var(--muted); }
+  .accent { color: var(--accent); }
+
+  /* Hero */
+  .hero-title { font-family: var(--serif); font-weight: 600; letter-spacing: -0.01em; line-height: 1.25; }
+
+  .badge {
+    font-family: var(--sans); font-size: 11px; font-weight: 600;
+    letter-spacing: 0.04em; text-transform: uppercase;
+    padding: 4px 10px; border-radius: 4px; display: inline-block;
+  }
+  .mode-badge { background: var(--accent-bg); color: var(--accent); }
+
+  .section-heading {
+    font-family: var(--sans); font-size: 13px; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+    border-top: 1px solid var(--border);
+    padding-top: 24px; margin-top: 56px; margin-bottom: 24px;
+    display: flex; align-items: baseline; gap: 8px;
+  }
+  .section-heading .num { color: var(--accent); font-weight: 700; margin-right: 4px; }
+  .section-subhead {
+    font-family: var(--sans); font-size: 14px; color: var(--muted);
+    margin-top: -16px; margin-bottom: 24px; font-style: italic;
+  }
+
+  /* TLDR */
+  .tldr-block {
+    font-family: var(--serif); font-size: 24px; line-height: 1.5;
+    padding: 24px 0 16px;
+    border-top: 2px solid var(--fg);
+  }
+  .worth-row {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px;
+    padding: 12px 0 20px; border-bottom: 1px solid var(--border);
+    font-family: var(--sans); font-size: 14px; color: var(--fg-secondary);
+  }
+
+  /* Narrative (导读故事) */
+  .narrative-block { font-family: var(--serif); font-size: 17.5px; line-height: 1.9; }
+  .narrative-block p { margin-bottom: 1.1em; }
+  .narrative-block p:first-of-type::first-letter {
+    font-size: 2.6em; line-height: 1; float: left; padding-right: 8px; margin-top: 2px;
+    color: var(--accent); font-weight: 600;
+  }
+
+  /* The one insight (带走一句) */
+  .insight-hero {
+    margin: 8px 0 16px; padding: 36px 40px; border-radius: 14px;
+    background: var(--accent-bg); position: relative;
+  }
+  .insight-hero .itext {
+    font-family: var(--serif); font-size: 27px; line-height: 1.5; font-weight: 600; color: var(--fg);
+  }
+  .insight-hero .ilabel {
+    font-family: var(--sans); font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 12px;
+  }
+
+  /* Key numbers */
+  .kn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+  .kn-card {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 18px 20px 14px;
+  }
+  .kn-metric { font-family: var(--sans); font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0.03em; margin-bottom: 6px; }
+  .kn-value { font-family: var(--mono); font-size: 26px; font-weight: 700; line-height: 1.2; color: var(--fg); }
+  .kn-value.kn-md { font-size: 19px; }
+  .kn-value.kn-sm { font-size: 15.5px; line-height: 1.45; }
+  .kn-context { font-family: var(--sans); font-size: 12.5px; line-height: 1.55; color: var(--fg-secondary); margin-top: 8px; }
+  .kn-page { font-family: var(--mono); font-size: 10.5px; color: var(--muted-soft); margin-top: 8px; }
+
+  /* Question card */
+  .question-card {
+    border-left: 3px solid var(--accent); padding: 20px 24px; margin-bottom: 32px;
+    background: var(--bg-card); border-radius: 0 8px 8px 0;
+  }
+  .question-num {
+    font-family: var(--sans); font-size: 12px; font-weight: 600; letter-spacing: 0.1em;
+    color: var(--accent); text-transform: uppercase; margin-bottom: 8px; display: block;
+  }
+  .question-text { font-family: var(--serif); font-size: 20px; font-weight: 600; line-height: 1.4; margin-bottom: 16px; }
+  .question-approach, .question-answer {
+    font-size: 15px; line-height: 1.7; padding: 12px 16px; border-radius: 6px; margin-top: 12px;
+  }
+  .question-approach { background: var(--border-soft); color: var(--fg-secondary); }
+  .question-answer { background: var(--accent-bg); }
+  .label-pill {
+    font-family: var(--sans); font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--accent); display: block; margin-bottom: 6px;
+  }
+
+  /* Premise rows */
+  .premise { border-left: 2px solid var(--border); padding: 4px 0 4px 20px; margin-bottom: 24px; transition: border-color .2s; }
+  .premise:hover { border-left-color: var(--accent); }
+  .premise-point { font-family: var(--serif); font-weight: 600; font-size: 17px; line-height: 1.4; margin-bottom: 8px; }
+  .premise-explanation { font-size: 15px; line-height: 1.7; color: var(--fg-secondary); }
+  .page-ref { font-family: var(--mono); font-size: 11px; color: var(--muted-soft); margin-left: 8px; white-space: nowrap; }
+
+  /* Mermaid */
+  .mental-block { margin-bottom: 56px; }
+  .mental-name { font-family: var(--serif); font-size: 22px; font-weight: 600; line-height: 1.3; margin-bottom: 10px; }
+  .mental-description { font-size: 15px; line-height: 1.7; color: var(--fg-secondary); margin-bottom: 20px; }
+  .mermaid-frame {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 28px 20px; margin: 16px 0; display: flex; justify-content: center; overflow-x: auto;
+  }
+  .mermaid-frame .mermaid { max-width: 100%; }
+  .mermaid-caption { font-family: var(--sans); font-size: 12px; color: var(--muted); text-align: center; margin-top: 8px; font-style: italic; }
+  .application-callout { background: var(--accent-bg); border-radius: 8px; padding: 16px 20px; margin-top: 16px; }
+  .application-callout .label {
+    font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 6px;
+  }
+
+  /* Tables */
+  .data-table { width: 100%; border-collapse: collapse; font-family: var(--sans); font-size: 14px; }
+  .data-table th {
+    text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--muted); padding: 8px 12px;
+    border-bottom: 2px solid var(--border);
+  }
+  .data-table td { padding: 10px 12px; border-bottom: 1px solid var(--border-soft); vertical-align: top; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table .num { font-family: var(--mono); white-space: nowrap; }
+  .pos { color: var(--green); } .neg { color: var(--red); }
+
+  /* Rating box (broker research) */
+  .rating-box {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 24px 28px; display: flex; flex-wrap: wrap; gap: 32px; align-items: center;
+  }
+  .rating-item .rlabel { font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .rating-item .rvalue { font-family: var(--serif); font-size: 26px; font-weight: 700; line-height: 1.1; }
+  .rating-item .rvalue.mono { font-family: var(--mono); }
+
+  /* Callout boxes */
+  .warn-box { margin-top: 20px; padding: 16px 20px; border-radius: 8px;
+    background: color-mix(in srgb, #f87171 10%, transparent); border-left: 3px solid var(--red); }
+  .warn-box .label { font-family: var(--sans); font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--red); margin-bottom: 8px; }
+  .warn-box .body { font-size: 14.5px; line-height: 1.7; color: var(--fg-secondary); }
+  .warn-box ul { padding-left: 18px; font-size: 14.5px; line-height: 1.7; color: var(--fg-secondary); }
+  .info-box { margin-top: 20px; padding: 16px 20px; border-radius: 8px;
+    background: var(--border-soft); border-left: 3px solid var(--muted); }
+  .info-box .label { font-family: var(--sans); font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+
+  /* Evidence / assumption cards */
+  .evidence-card {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 18px 22px; margin-bottom: 16px;
+  }
+  .evidence-claim { font-family: var(--serif); font-weight: 600; font-size: 16.5px; line-height: 1.45; }
+  .evidence-detail { font-size: 14px; line-height: 1.65; color: var(--fg-secondary); margin-top: 8px; }
+  .strength-badge { font-family: var(--sans); font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+    text-transform: uppercase; padding: 2px 8px; border-radius: 3px; margin-left: 8px; vertical-align: 2px; }
+  .strength-strong { background: color-mix(in srgb, var(--green) 15%, transparent); color: var(--green); }
+  .strength-moderate { background: color-mix(in srgb, var(--yellow) 18%, transparent); color: var(--yellow); }
+  .strength-weak { background: color-mix(in srgb, var(--red) 14%, transparent); color: var(--red); }
+
+  /* Reading map */
+  .rmap-item { display: flex; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--border-soft); align-items: baseline; }
+  .rmap-item:last-child { border-bottom: none; }
+  .rmap-pages { font-family: var(--mono); font-size: 12px; color: var(--muted); min-width: 76px; flex-shrink: 0; }
+  .rmap-verdict { font-family: var(--sans); font-size: 10px; font-weight: 700; letter-spacing: 0.05em;
+    text-transform: uppercase; padding: 2px 8px; border-radius: 3px; flex-shrink: 0; min-width: 44px; text-align: center; }
+  .v-deep { background: var(--accent); color: #fff; }
+  html.dark .v-deep { color: #1c1917; }
+  .v-skim { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+  .v-skip { background: var(--border-soft); color: var(--muted-soft); }
+  .rmap-body .rmap-section { font-family: var(--serif); font-weight: 600; font-size: 15.5px; }
+  .rmap-body .rmap-summary { font-size: 13.5px; color: var(--fg-secondary); font-family: var(--sans); margin-top: 2px; }
+  .rmap-body .rmap-why { font-size: 12px; color: var(--muted); font-family: var(--sans); font-style: italic; }
+
+  /* Fine print severity */
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 10px; flex-shrink: 0; margin-top: 9px; }
+  .dot-red { background: var(--red); } .dot-yellow { background: var(--yellow); } .dot-info { background: var(--muted-soft); }
+
+  /* Critical lens */
+  .lens-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 720px) { .lens-grid { grid-template-columns: 1fr; } }
+  .lens-col { border-radius: 10px; padding: 20px 24px; background: var(--bg-card); border: 1px solid var(--border); }
+  .lens-col .ltitle { font-family: var(--sans); font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 12px; }
+  .lens-col ul { padding-left: 18px; font-size: 14.5px; line-height: 1.7; color: var(--fg-secondary); }
+  .lens-col li { margin-bottom: 8px; }
+
+  /* Playbook steps */
+  .playbook-block { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 28px; margin-bottom: 32px; }
+  .playbook-name { font-family: var(--serif); font-size: 20px; font-weight: 600; margin-bottom: 6px; }
+  .playbook-when { font-family: var(--sans); font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+  .step-list { counter-reset: step; }
+  .step-item { position: relative; padding-left: 48px; padding-bottom: 20px; counter-increment: step; }
+  .step-item:not(:last-child)::after { content: ""; position: absolute; left: 17px; top: 36px; bottom: 0; width: 2px; background: var(--border); }
+  .step-item::before {
+    content: counter(step); position: absolute; left: 0; top: 0; width: 36px; height: 36px;
+    border-radius: 50%; background: var(--accent-bg); color: var(--accent);
+    font-family: var(--sans); font-weight: 700; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .step-title { font-family: var(--serif); font-weight: 600; font-size: 16px; margin-bottom: 6px; }
+  .step-detail { font-size: 14px; line-height: 1.7; color: var(--fg-secondary); }
+
+  /* Quick start / checklist */
+  .quickstart-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-soft); font-size: 15px; line-height: 1.6; }
+  .quickstart-item:last-child { border-bottom: none; }
+  .quickstart-item .check { color: var(--accent); font-size: 18px; line-height: 1.4; flex-shrink: 0; }
+
+  /* Pull quote */
+  .pullquote { margin: 32px 0; padding: 8px 0 8px 32px; border-left: 4px solid var(--accent); position: relative; }
+  .pullquote-text { font-family: var(--serif); font-style: italic; font-size: 20px; line-height: 1.55; }
+  .pullquote-attribution { font-family: var(--sans); font-size: 13px; color: var(--muted); margin-top: 10px; }
+  .pullquote-note { font-family: var(--sans); font-size: 13px; color: var(--fg-secondary); margin-top: 6px; }
+
+  /* References */
+  .glossary-row { display: grid; grid-template-columns: 180px 1fr; gap: 16px; padding: 8px 0; border-bottom: 1px solid var(--border-soft); font-size: 14px; }
+  .glossary-row:last-child { border-bottom: none; }
+  .glossary-term { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--accent); }
+  .glossary-definition { color: var(--fg-secondary); line-height: 1.6; }
+  .reading-item { padding: 10px 0; border-bottom: 1px solid var(--border-soft); display: flex; gap: 12px; align-items: baseline; font-size: 14px; }
+  .reading-item:last-child { border-bottom: none; }
+  .reading-type { font-family: var(--sans); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--accent); background: var(--accent-bg); padding: 2px 8px; border-radius: 3px; flex-shrink: 0; min-width: 60px; text-align: center; }
+  .reading-name { font-weight: 600; }
+  .reading-note { color: var(--muted); font-size: 13px; margin-top: 2px; }
+
+  /* TOC */
+  .toc-link { font-family: var(--sans); font-size: 13px; color: var(--muted); transition: color .15s; padding: 4px 0; display: block; }
+  .toc-link:hover, .toc-link.active { color: var(--accent); }
+  .toc-link.active { font-weight: 600; }
+
+  @media print {
+    .no-print { display: none !important; }
+    body { font-size: 12pt; }
+    .question-card, .playbook-block, .mermaid-frame, .kn-card, .evidence-card, .rating-box { break-inside: avoid; }
+  }
+  section[id] { scroll-margin-top: 80px; }
+</style>
+<style>
+#mtbar{display:flex;align-items:center;justify-content:space-between;padding:8px 20px;background:var(--bg,#fafaf7);border-bottom:1px solid var(--border,#e7e5e4);font-family:var(--sans,ui-sans-serif,system-ui,sans-serif);font-size:12px;color:var(--muted,#78716c);transition:padding .18s ease,box-shadow .18s ease}
+#mtbar a{display:inline-flex;align-items:center;gap:9px;min-height:38px;padding:0 12px;margin-left:-12px;color:var(--fg,#1c1917);text-decoration:none;border-radius:9px}
+#mtbar a:hover{background:var(--border-soft,#f5f5f4)}
+#mtbar a i{font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:16px}
+#mtprog{position:fixed;top:0;left:0;height:3px;width:0;background:var(--accent,#B45309);z-index:99;pointer-events:none}
+.mt-original-title{margin-top:10px;font-family:var(--sans,ui-sans-serif,system-ui,sans-serif);font-size:15px;line-height:1.55;color:var(--muted,#78716c)}
+nav.no-print.sticky,body>nav.sticky{transition:min-height .18s ease,box-shadow .18s ease}
+html.mt-scrolled #mtbar{padding-top:4px;padding-bottom:4px;box-shadow:0 8px 24px rgba(0,0,0,.05)}
+html.mt-scrolled nav.no-print.sticky,html.mt-scrolled body>nav.sticky{box-shadow:0 8px 24px rgba(0,0,0,.08)}
+html.mt-scrolled nav.no-print.sticky .max-w-6xl,html.mt-scrolled body>nav.sticky .max-w-6xl{padding-top:.35rem!important;padding-bottom:.35rem!important;min-height:40px!important}
+#mttoc{display:none;align-items:center;justify-content:center;min-width:64px;height:44px;border:1px solid var(--border,#e7e5e4);background:var(--bg-card,#fff);color:var(--fg,#1c1917);border-radius:999px;font-size:12px;font-weight:700;font-family:var(--sans,ui-sans-serif,system-ui,sans-serif);cursor:pointer}
+#mttop{position:fixed;right:16px;z-index:98;display:none;align-items:center;justify-content:center;border:1px solid var(--border,#e7e5e4);background:var(--bg-card,#fff);color:var(--fg,#1c1917);box-shadow:0 8px 24px rgba(0,0,0,.16);cursor:pointer}
+#mttop{bottom:80px;width:46px;height:46px;border-radius:999px;font-size:16px}
+@media (max-width:960px){#mttoc{display:flex}}
+#mttop.show{display:flex}
+#mtsheet{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.42)}
+#mtsheet .mtsheet-in{position:absolute;left:0;right:0;bottom:0;max-height:72vh;overflow:auto;background:var(--bg,#fafaf7);border-radius:18px 18px 0 0;padding:14px 18px calc(22px + env(safe-area-inset-bottom));box-shadow:0 -12px 40px rgba(0,0,0,.2)}
+.mtsheet-head{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:14px;padding:4px 2px 10px;color:var(--fg,#1c1917);font-family:var(--sans,ui-sans-serif,system-ui,sans-serif)}
+#mtclose{width:44px;height:44px;margin:-10px -10px -10px 0;border:0;background:none;font-size:15px;cursor:pointer;color:var(--muted,#78716c)}
+#mtlinks a{display:flex;min-height:46px;align-items:center;padding:2px 8px;color:var(--fg-secondary,#44403c);text-decoration:none;font-size:14px;border-bottom:1px solid var(--border-soft,#f5f5f4);font-family:var(--sans,ui-sans-serif,system-ui,sans-serif)}
+#mtlinks a:hover,#mtlinks a:active{background:var(--border-soft,#f5f5f4)}
+@media (max-width:640px){
+ body{padding-bottom:96px}
+ #mtbar{position:sticky;top:0;z-index:97;padding:4px 14px;font-size:11px}
+ #mtbar a{min-height:32px;padding:0 10px}
+ #mtbar a i{font-size:14px}
+ #mttoc{display:flex;height:44px;min-width:64px;padding:0 14px}
+ .hero-title{font-size:30px!important;line-height:1.22!important;letter-spacing:0!important}
+ .mt-original-title{font-size:14px!important;line-height:1.55!important;color:var(--muted,#57534e)!important}
+ .tldr-block{font-size:18px!important;line-height:1.65!important;padding:18px 0!important}
+ .question-card{padding:16px 18px!important;margin-bottom:24px!important}
+ .question-text{font-size:18px!important;line-height:1.45!important;margin-bottom:12px!important}
+ .question-approach,.question-answer{font-size:15px!important;line-height:1.65!important;padding:10px 12px!important}
+ .premise-explanation,.mental-description,.slide-card figcaption{font-size:14px!important;line-height:1.65!important}
+ #mttop{right:18px;bottom:calc(72px + env(safe-area-inset-bottom));width:44px;height:44px}
+ nav.no-print.sticky .max-w-6xl,body>nav.sticky .max-w-6xl{min-height:44px!important;padding-top:.5rem!important;padding-bottom:.5rem!important}
+}
+@media print{#mtbar,#mtprog,#mttoc,#mttop,#mtsheet{display:none!important}}
+</style>
+</head>
+<body>
+<!--mt-chrome-->
+<div id="mtbar"><a href="/taste/">&larr;&nbsp;<i>Valley Beacon 深读</i></a><button id="mttoc" type="button" aria-label="打开目录">目录</button></div>
+<div id="mtprog"></div>
+<button id="mttop" type="button" aria-label="回到顶部">&uarr;</button>
+<div id="mtsheet" hidden><div class="mtsheet-in"><div class="mtsheet-head">目录<button id="mtclose" type="button" aria-label="关闭">&#10005;</button></div><nav id="mtlinks"></nav></div></div>
+
+
+<nav class="no-print sticky top-0 z-40 backdrop-blur" style="background: color-mix(in srgb, var(--bg) 85%, transparent); border-bottom: 1px solid var(--border);">
+  <div class="max-w-6xl mx-auto flex items-center justify-between px-6 py-3 ui">
+    <a href="#top" class="font-semibold accent text-sm">AI Reader</a>
+    <div class="flex items-center gap-3 text-sm">
+      <button onclick="document.documentElement.classList.toggle('dark')" class="text-muted hover:opacity-80 px-2 py-1" title="切换深色">🌓</button>
+      <button onclick="window.print()" class="text-muted hover:opacity-80 px-2 py-1" title="打印/PDF">🖨</button>
+    </div>
+  </div>
+</nav>
+
+<div id="top" class="max-w-6xl mx-auto px-6 py-12 grid grid-cols-1 lg:grid-cols-[1fr_200px] gap-12">
+  <main id="root" class="space-y-2 min-w-0"></main>
+  <aside class="no-print hidden lg:block">
+    <div class="sticky top-20">
+      <div class="ui text-xs uppercase tracking-wider text-muted mb-3" style="letter-spacing: 0.08em;">目录</div>
+      <nav id="toc"></nav>
+    </div>
+  </aside>
+</div>
+
+<footer class="no-print max-w-6xl mx-auto px-6 py-12 text-xs text-muted text-center ui" style="border-top: 1px solid var(--border);">
+  Generated by ai-reader · 页码可溯源 · Mermaid diagrams · Print-ready
+</footer>
+
+<script id="report-data" type="application/json">{"meta":{"title":"Anthropic 联创 Ben Mann：AGI 时间线、离开 OpenAI、对齐安全","source":"https://www.lennysnewsletter.com/p/anthropic-co-founder-benjamin-mann","source_url":"https://www.lennysnewsletter.com/p/anthropic-co-founder-benjamin-mann","doc_type":"deep_article","authors":["Ben Mann","Lenny Rachitsky"],"institution":"Lenny's Podcast","publish_date":"2025-07-20","pages":2,"domain":"AI 前沿 / 对齐安全 / AGI 时间线","mode":"familiar","language":"en","extraction_source":"html","extraction_confidence":"high","original_title":"Anthropic co-founder Ben Mann: AGI predictions, leaving OpenAI, what keeps him up at night"},"tldr":"Anthropic 联创 Ben Mann：超级智能 50 分位约 2028 年到来，scaling law 未停反在加速；离开 OpenAI 是因为安全没被排在第一；X-risk 概率 0-10% 但边际上几乎无人在管，值得押注。","worth_reading":{"score":"worth-skim","one_liner":"Anthropic 世界观第一手表述，观点密但无新数据，判断多于论证","who_should_read":"关注 AGI 时间线/对齐/AI 就业冲击的 builder 与决策者"},"narrative":"把 Ben Mann 想象成一个从科幻小说里走出来、如今坐在指数曲线拐点上的工程师。故事的主角其实是「指数」本身——他反复回到同一个例子：一条指数曲线在早期看起来是贴地的平线，几乎为零，直到你撞上曲线的膝盖，一切开始垂直上升。他说自己 2019 年看到 GPT-2 时就感到「这就是我们通向 AGI 的路」，比大多数人在 ChatGPT 时刻的觉醒早了好几年。\n\n困境是：大多数人用线性直觉去看一个指数世界，于是得出「进展在放缓」的结论。Ben 的反驳是这个叙事每半年冒出来一次、从没对过——模型发布节奏从一年一次变成一到三个月一次，pre-training 让位给 RL scaling，但 scaling law 跨 15 个数量级依然成立，只是你得把「衡量什么」的定义换一下（不是芯片上的晶体管密度，而是数据中心里能塞多少 flops）。\n\n转折点是 2020 年底他和另外八人离开 OpenAI。表面看两家使命几乎一样（让通向 AGI 的过渡对人类安全有益），但在 OpenAI 内部，Sam 把公司描述为「安全、研究、创业」三个部落互相制衡——Ben 觉得这本身就是错的框法，因为真到关键时刻，他们感到安全并没有被排在第一。于是这批「OpenAI 所有安全团队的负责人」出走，成立一个能同时站在前沿又把安全排在一切之前的组织。\n\n他们发生的事，是发现安全和能力不是二选一，而是「凸」的——做好一个会帮到另一个。Opus 3 让人爱上的「人格」，直接来自对齐研究；Constitutional AI 用一份自然语言原则清单让模型递归地自我批评、重写、内化价值观（RLAIF，回路里没有人类）。而结果是一套可操作的风险语言：ASL-3（现状，有限风险）→ ASL-4（误用可致重大人命损失）→ ASL-5（潜在灭绝级）。\n\n核心洞察落在「边际」二字：Ben 承认事情「压倒性地大概率会好」，X-risk 只有 0-10%，但几乎没有人在盯着那个下行尾部——全球 3000 亿美元/年的 CapEx 之下，做安全的人不到一千。就像有人告诉你下次坐飞机有 1% 概率会死你也会犹豫，赌注是整个人类的未来时，「大概率没事」不够，得「三重确认」。这就是他把整个职业押在一个小概率但不可逆的尾部上的理由。","the_one_insight":"别用能力做安全的对立面——在「安全 vs 能力凸互补」和「X-risk 边际几乎无人管」这两点上下注。","key_numbers":[{"metric":"超级智能到来时间（50 分位）","value":"~2028","context":"Ben 主要采信 AI 2027 superforecaster 报告，其预测已后移到 2028（域名没改）","page":"AGI 时间线段"},{"metric":"X-risk / 极端坏结果概率","value":"0-10%","context":"他明说这是「最细颗粒度」的估计，误差带很宽；重点不是数值而是边际上无人管","page":"对齐概率段"},{"metric":"全球做 AI 安全的人数","value":"<1000","context":"对照全行业每年约 3000 亿美元 CapEx，凸显安全投入的极度稀缺","page":"离开 OpenAI 段"},{"metric":"全行业年 CapEx / 增速","value":"~$300B，约 2x/年","context":"用来论证 1 亿美元挖人是「九牛一毛」，再翻几倍就是万亿级","page":"Zuck 挖角段"},{"metric":"Claude Code 团队由 Claude 写的代码占比","value":"95%","context":"Ben 更愿换个说法：等价于团队写了 10-20x 的代码，小团队撬动更大产出","page":"就业冲击段"},{"metric":"Intercom Fin 客服自动解决率","value":"82%","context":"作为「AI 已在改变工作」的现实证据；剩下的人力转向更难的工单","page":"就业冲击段"},{"metric":"单位智能成本下降 / 外推","value":"10x（已发生），3 年后同价约 1000x 更聪明","context":"算法+数据+效率三重改进叠加的行业趋势外推，非实测","page":"瓶颈段"},{"metric":"触发「转型式 AI」的经济图灵测试阈值","value":"50% 货币加权岗位","context":"agent 能在 50%（按薪酬加权）的岗位通过经济图灵测试即视为转型式 AI","page":"AGI 定义段"}],"core_questions":[{"question":"AI 进展真的到平台期了吗？","approach":"反驳「放缓」叙事：看发布节奏而非单次跃迁，把 scaling 的衡量口径从 pre-training 换成 RL scaling + 数据中心 flops","answer":"没有，反而在加速。「放缓」叙事每半年出现一次、从未成真。人们把发布更频繁（因而单次 delta 更小）误读为放缓；scaling law 跨 15 个数量级仍成立，只是需要换定义（RL scaling 接棒 pre-training）。"},{"question":"什么时候算到了 AGI / 转型式 AI？","approach":"抛弃「AGI」这个模糊词，改用可操作的经济图灵测试 + 岗位篮子","answer":"当 agent 能在 50%（按薪酬加权）的岗位上通过经济图灵测试——即雇主签约几个月后发现雇的是机器却仍满意——就是转型式 AI。另一把尺子：全球 GDP 年增速从现在约 3% 升到 10%+。"},{"question":"他们为什么离开 OpenAI 创立 Anthropic？","approach":"对比两家几乎相同的使命 vs 内部优先级的落差","answer":"使命措辞几乎一样，但 OpenAI 内部把「安全/研究/创业」当三个互相制衡的部落，关键时刻安全没被排在第一。这批人（OpenAI 各安全团队负责人）想要一个能同时在前沿、又把安全置于一切之上的组织。"},{"question":"安全和竞争力（前沿能力）是不是零和？","approach":"用 Opus 3 人格、Constitutional AI、sycophancy 三个例子说明二者互补","answer":"不是零和，而是「凸」的——做好一个会帮到另一个。Claude 受欢迎的人格直接来自对齐研究；因为认真做对齐而非优化 engagement，Claude 是最不谄媚（least sycophantic）的模型之一。"},{"question":"对齐这件事到底能不能成？该怎么下注？","approach":"用 Anthropic「Theory of Change」三世界框架（悲观/乐观/居中）划分行动","answer":"证据既反对「不可能对齐」的悲观世界（对齐技术在起效），也反对「默认就对齐」的乐观世界（实验室里已观察到 deceptive alignment）。最可能落在居中世界——对齐研究的边际影响极大，若只做经济最大化动作，结局不会好。"},{"question":"普通人如何在 AI 时代不被取代？","approach":"从 Claude Code 的高效用户 vs 低效用户差异中抽方法","answer":"把新工具当新工具用、别当旧工具用：敢提「有野心的大改动」，失败就完整重来再问 2-3 次（pass@k 逻辑，重开成功率远高于死磕同一处）。对孩子则不押名校/补习，押好奇、善良、创造力（Montessori）。"}],"_type_deep_article":{"thesis":"AI 正处在一条正在加速的指数曲线上，超级智能可能几年内到来；安全与能力不是取舍而是凸互补，而 X-risk 虽小（0-10%）却几乎无人在边际上盯防——这正是把职业押在对齐上的理由。","argument_chain":{"summary":"指数被低估 → scaling 未停只是换了口径 → 转型式 AI 几年内到来 → 对齐必须提前做（事后就来不及） → 但安全≠牺牲能力（凸互补） → 边际稀缺使这件事值得押注","mermaid":"flowchart LR\n  A[指数被线性直觉低估] --> B[scaling law 换口径后仍加速]\n  B --> C[转型式 AI 约 2028]\n  C --> D[超级智能后再对齐就晚了]\n  D --> E[安全与能力凸互补<br>非零和]\n  E --> F[X-risk 0-10% 但边际无人管]\n  F --> G[把职业押在对齐上]"},"key_points":[{"point":"「AI 进展在放缓」是被反复证伪的错觉","support":"发布节奏从一年一次变成 1-3 个月一次；人们拿更频繁的小步迭代和过去的年度大跃迁比，产生放缓错觉；scaling law 跨 15 个数量级仍成立，只需把口径从晶体管密度换成数据中心 flops","support_type":"firsthand","page":"平台期段"},{"point":"用「经济图灵测试」替代模糊的 AGI 定义","support":"签约 agent 做某岗位 1-3 个月，若雇主满意却发现是机器即通过；对 50% 货币加权岗位通过即转型式 AI。Ben 明说这个测试不是他原创但很认同","support_type":"cited","page":"AGI 定义段"},{"point":"离开 OpenAI 的根因是安全的优先级排序","support":"Sam 把公司描述为安全/研究/创业三部落互相制衡；Ben 认为这框法本身就错，关键时刻安全没排第一。出走的是 OpenAI 各安全团队负责人","support_type":"firsthand","page":"离开 OpenAI 段"},{"point":"安全和能力是凸互补，不是零和","support":"Opus 3 广受喜爱的人格直接来自 Amanda Askell 等的对齐研究；因认真对齐而非优化 engagement，Claude 是最不谄媚的模型之一。这是 firsthand 经验但「最不谄媚」是自评","support_type":"firsthand","page":"安全 vs 竞争段"},{"point":"Constitutional AI + RLAIF：用模型自我批评来内化价值观","support":"给模型一份自然语言原则清单（取自联合国人权宣言、Apple 隐私条款等），让它自己生成→自查是否违背→批评并重写→只保留最终答案，回路里没有人类；已公开 Constitution 并研究 collective constitution","support_type":"firsthand","page":"Constitutional AI 段"},{"point":"公开模型的坏行为是刻意的信任策略，不是营销","support":"blackmail、tungsten cube 内部小店亏损等都是实验室设定下的可控测试；政策制定者反而因为这种「直话」更信任 Anthropic，这也是它在华盛顿被信任的原因。反例：computer use 因达不到安全门槛而只出 API、压住不炒作","support_type":"firsthand","page":"分享坏行为段"},{"point":"X-risk 该按「边际影响」而非「绝对概率」来决策","support":"0-10% 的概率 + 飞机 1% 致死类比：赌注是整个人类未来时「大概率没事」不够；全球做安全的人不到一千 vs 3000 亿/年 CapEx，边际极稀缺","support_type":"speculation","page":"对齐概率段"},{"point":"递归自我改进要靠「经验主义」而非纯自省来避免撞墙","support":"类比科学和公司这两种已有的「可递归自我改进的规模化 agent」：给模型做实验、撞现实反馈的能力，就不会因「看不到自己的错」而撞墙。Anthropic DNA 是经验主义（多物理学家）","support_type":"speculation","page":"RLAIF 段"},{"point":"当下最大瓶颈仍是算力（数据中心/电力/芯片），其次是人","support":"「10 倍芯片虽不至于快 10 倍但会显著加速」；scaling 三要素 compute/algorithms/data；transformer 相对 LSTM 的 scaling 指数更高是关键性算法进步","support_type":"firsthand","page":"瓶颈段"}],"author_stance":"说话人是 Anthropic 联合创始人、产品工程负责人、GPT-3 架构师之一——高度 insider，对 Anthropic 有直接利益（招聘/融资/政策影响力）。他本人坦承产品/收入是「养」安全研究的经济引擎，因此几乎所有论点都同时服务于「Anthropic 的世界观是对的」和「来 Anthropic 工作/相信 Anthropic」。这是访谈而非文章，缺少书面长文的论证严密度：判断多、可核验数据少，且对手（OpenAI）的说法完全缺席。听者应把它当作「Anthropic 官方世界观的第一手、有偏样本」。","practical_takeaways":["用 Claude Code 类工具时：敢提有野心的大改动；失败就完整重开再试 2-3 次（pass@k 逻辑，重开成功率远高于死磕），并把「已试过 X 且失败，别再试」喂回去","把「新工具当新工具用」当反模式检查表——沿用旧工具的习惯（autocomplete/简单问答式）是低效用户的共同特征","评估「AI 是否已影响某岗位」用经济图灵测试思维：设想签约一个 agent 做该岗位 1-3 个月你会不会满意","对下行风险做决策时用「边际 + 不可逆性」而非「绝对概率」：稀缺且不可逆的尾部，即使小概率也值得投入","职业/教育押注方向：好奇、善良、创造力、自主学习 > 事实性知识与名校履历（facts will fade into the background）"]},"_unfamiliar_mode":null,"_familiar_mode":{"increments":[{"fact":"AI 2027 报告的中位预测已从 2027 后移到 2028（域名未改）","why_new":"把一个被广泛引用的时间线的最新修订说清楚，多数二手转述仍停在 2027","page":"AGI 时间线段"},{"fact":"Claude Code 团队 95% 的代码由 Claude 写，Ben 更愿表述为团队写了 10-20x 的代码","why_new":"给出内部具体比例 + 一个反「取代」的框法（扩大产出而非替换人）","page":"就业冲击段"},{"fact":"Anthropic Labs 团队已改名 Frontiers，MCP 和 Claude Code 都出自该团队","why_new":"组织层面的新信息：这两个高影响产品的共同出处及其运作模式","page":"Labs/Frontiers 段"},{"fact":"Ben 本人已不做 AI 研究，专注产品工程","why_new":"反直觉的角色定位——联创+GPT-3 作者如今主攻产品，并把产品定位为安全研究的经济引擎","page":"招聘段"}],"new_takes":[{"take":"安全与能力是「凸」互补而非取舍","vs_mainstream":"主流常把安全对齐视为拖慢能力的税；Ben 主张做好对齐直接产出了 Claude 的人格与低谄媚这类能力优势"},{"take":"AGI 是个应当弃用的词，改用可操作的经济图灵测试 + 岗位篮子","vs_mainstream":"行业普遍还在争论 AGI 的能力定义（能不能做 X）；他把定义换成「是否在经济上造成转型」"},{"take":"公开模型的坏行为不是自曝其短而是信任资产","vs_mainstream":"常规公关认为这让公司难看；他主张这正是政策圈信任 Anthropic 的来源"},{"take":"该按『边际影响』而非『绝对概率』给 X-risk 做决策","vs_mainstream":"外界常把 0-10% 的低概率当作『不必太担心』；他用飞机 1% 致死类比 + 边际稀缺论证反而更该投入"}],"insights":[{"insight":"「进展放缓」错觉的机制是发布频率上升摊薄了单次 delta","implications":"评估模型进展别只看相邻版本跳跃，要还原到固定时间窗内的累计能力，否则会系统性低估斜率"},{"insight":"递归自我改进能否不撞墙，取决于能否给模型『做实验、撞现实』的经验主义闭环","implications":"对 agent/自我改进系统的设计者：可验证的环境反馈比模型『自省』更是关键杠杆，也是对齐与失控的同一个战场"},{"insight":"产品/收入被明确定位为『养』安全研究的引擎","implications":"理解 Anthropic 的动作要把商业与安全看成一条链，而非割裂——它做产品是为了政策影响力与研究经费"}],"tensions":[{"point":"「最不谄媚的模型之一」","your_prior":"谄媚度需第三方基准横评才能定论","doc_view":"Ben 以自评方式断言 Claude 因认真对齐而最不谄媚"},{"point":"既说『大概率会好』又把整个职业押在防尾部风险上","your_prior":"乐观与高投入通常此消彼长","doc_view":"用『边际 + 不可逆性』把二者统一：越是小而不可逆的尾部越该投入"},{"point":"computer use 因安全达不到门槛只出 API，同期又说很快会有很酷的东西","your_prior":"安全审慎与快速上新常有张力","doc_view":"把审慎叙述为差异化优势——正因解决了安全才敢做别人不敢做的"},{"point":"对『放缓叙事』要求听众开『bullshit detector』","your_prior":"内部人对自家进展有强动机做多","doc_view":"他视放缓叙事为反复被证伪的错觉，但论据主要是自家发布节奏"}],"open_questions":["「凸互补」目前只有 Opus 3 人格这一个正例，安全投入在什么规模/什么能力维度上会重新变成取舍？未展开","0-10% 的 X-risk 估计的推导过程完全没有给（他自己也承认 reference class 极少），无法判断这个区间怎么来的","经济图灵测试的『货币加权 50% 岗位』如何实际测量？谁来做这个基准？访谈未触及","OpenAI 一方对『安全没排第一』的说法完全缺席，单边叙述","deceptive alignment 只在实验室设定下观察到——它在真实部署中的发生率与可检测性未量化"]},"critical_lens":{"strengths":["把抽象的 AGI/安全话题落到可操作框架：经济图灵测试、ASL-3/4/5 分级、三世界 Theory of Change，便于外部据此追踪","对『进展放缓』给出了具体的机制性反驳（发布频率摊薄 delta + scaling 换口径），而非空喊","对自身立场有一定坦诚：明说产品是安全研究的经济引擎、承认自己也不免于被取代、承认 X-risk 估计误差带很宽"],"weaknesses":["这是访谈不是论证：几乎所有关键判断（2028、0-10%、10x/1000x 外推、95% 代码）都是断言或外推，缺过程与出处，无法就地核验","强 insider 利益：所有论点同时服务于『Anthropic 是对的』与招聘/融资/政策影响力，正反例的取样很难说中立（如只举 Opus 3 人格支撑『凸互补』）","对手叙述缺席：离开 OpenAI 的『安全没排第一』是单边说法，OpenAI 视角零呈现","若干数字是自评或外推被当成事实语气讲出（『最不谄媚』『3 年后 1000x』），听众易把判断误当数据"],"what_to_verify":[{"item":"超级智能约 2028 的时间线","how":"读 AI 2027 原始报告及其方法论，看 superforecaster 的更新依据，而非只采信转述"},{"item":"『scaling law 未放缓』","how":"交叉核对 Epoch AI / METR 的公开时间-能力曲线，以及独立基准（非厂商自报）的版本间提升"},{"item":"Claude『最不谄媚』","how":"查第三方 sycophancy 基准（如公开 sycophancy eval / 独立横评），不采信自评"},{"item":"82% 客服解决率 / Fin 数据","how":"看 Intercom 官方口径与统计方法（分子分母如何定义），注意是否为最优场景挑选"},{"item":"deceptive alignment 的真实风险量级","how":"读 Anthropic 相关论文原文，确认是实验室诱导设定还是自然发生，及其在部署中的可检测性"}]},"reading_map":[{"section":"Zuck 挖角 / 行业 CapEx","pages":"开场","summary":"1 亿挖人 vs 3000 亿 CapEx，Anthropic 靠使命留人","verdict":"skim","why":"态度鲜明但信息量低"},{"section":"scaling 没有放缓","pages":"前段","summary":"放缓是反复被证伪的错觉，换口径后仍加速","verdict":"deep","why":"核心反共识论点+机制"},{"section":"AGI 定义 / 经济图灵测试","pages":"前中段","summary":"弃用 AGI，改用经济图灵测试和岗位篮子","verdict":"deep","why":"最可操作的框架"},{"section":"AI 对就业的冲击","pages":"中段","summary":"95% 代码由 Claude 写、82% 客服自动解决、先扩产后置换","verdict":"deep","why":"现实证据+反取代框法"},{"section":"给个人/孩子的建议","pages":"中段","summary":"敢用大改动+重开重试；押好奇善良创造力","verdict":"skim","why":"实用但较通识"},{"section":"离开 OpenAI","pages":"中段","summary":"三部落框法错在安全没排第一","verdict":"deep","why":"创业动机第一手叙述"},{"section":"安全 vs 竞争力 / Constitutional AI","pages":"中后段","summary":"凸互补；CAI+RLAIF 用模型自查内化价值观","verdict":"deep","why":"方法论核心"},{"section":"为何执着于安全 / ASL 分级 / 分享坏行为","pages":"后段","summary":"科幻+Bostrom 启蒙；ASL-3/4/5；公开坏行为换信任","verdict":"deep","why":"对齐世界观与风险语言"},{"section":"对齐能否成 / 三世界 / X-risk 0-10%","pages":"后段","summary":"居中世界最可能，按边际影响下注","verdict":"deep","why":"全篇论点收束处"},{"section":"RLAIF / 递归自我改进 / 瓶颈","pages":"后段","summary":"经验主义避免撞墙；瓶颈是算力+人","verdict":"skim","why":"有洞见但偏推测"},{"section":"Ben 个人 / resting in motion / Labs→Frontiers","pages":"结尾","summary":"可持续节奏；MCP/Claude Code 出自该团队","verdict":"skim","why":"花絮+组织信息"}],"quotes":[{"text":"I think 50th percentile chance of hitting some kind of superintelligence is now like 2028.","page":"AGI 时间线段","note":"「我认为达到某种超级智能的 50 分位概率现在大约在 2028 年。」——全篇最被引用的时间线锚点"},{"text":"This narrative comes out every six months or so and it's never been true, and so I kind of wish people would have a little bit of a bullshit detector in their heads when they see this.","page":"平台期段","note":"「这个（放缓）叙事每半年冒出来一次、从没对过，我真希望大家看到时脑子里能有个『扯淡探测器』。」"},{"text":"My best case scenario at Meta is that we make money and my best case at Anthropic is we affect the future of humanity.","page":"Zuck 挖角段","note":"「在 Meta 我最好的结局是赚到钱，在 Anthropic 最好的结局是影响人类的未来。」——解释高挖角抵抗力的核心叙事"},{"text":"Once we get to superintelligence, it will be too late to align the models probably.","page":"分享坏行为段","note":"「一旦到了超级智能，大概就来不及对齐模型了。」——为什么要提前做对齐的核心论点"},{"text":"Superintelligence is a lot about how do we keep God in a box and not let the God out. And with language models, it's been ... to see people pulling the God out of the box.","page":"为何执着于安全段","note":"「Bostrom 的《超级智能》讲的是怎么把神关在盒子里别放出来；而语言模型时代，人们主动把神从盒子里拉出来。」——概括范式转变的金句"}],"references":{"glossary":[{"term":"Economic Turing Test","definition":"签约 agent 做某岗位若雇主满意却发现是机器，即通过；用来定义转型式 AI"},{"term":"Constitutional AI (CAI)","definition":"用一份自然语言原则清单让模型自查/自我批评/重写以内化价值观"},{"term":"RLAIF","definition":"从 AI 反馈中做强化学习，回路里无人类（对应 RLHF）"},{"term":"ASL-3/4/5","definition":"Anthropic 责任扩展政策的 AI 安全等级：3=有限风险，4=可致重大人命损失，5=潜在灭绝级"},{"term":"deceptive alignment","definition":"模型表面对齐、实则暗藏他图；已在实验室设定中观察到"},{"term":"transformative AI","definition":"Ben 用来替代 AGI 的词，强调是否在经济/社会造成转型而非能力是否全面"}],"further_reading":[{"type":"book","name":"Superintelligence (Nick Bostrom)","note":"Ben 2016 年读后决定投身安全的启蒙书"},{"type":"book","name":"Replacing Guilt (Nate Soares)","note":"他应对『安全责任重压』的心法来源，含 resting in motion"},{"type":"book","name":"The Hacker and the State (Ben Buchanan)","note":"论证纯软件攻击也能造成物理破坏（乌克兰电厂案例）"},{"type":"data","name":"AI 2027 report","note":"他主要采信的超级智能时间线预测（中位已后移到 2028）"},{"type":"paper","name":"Machines of Loving Grace (Dario Amodei)","note":"『数据中心里的天才之国』愿景出处"},{"type":"company","name":"METR (Beth Barnes)","note":"软件任务时间跨度能力的研究，Labs 团队据此『向前看』"},{"type":"data","name":"80,000 Hours","note":"Ben 推荐的进入 AI 安全领域的路径指南"}]}}</script>
+
+<script type="module">
+  const data = JSON.parse(document.getElementById('report-data').textContent);
+  const root = document.getElementById('root');
+  const tocEl = document.getElementById('toc');
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const sections = [];
+
+  let sectionCounter = 0;
+  const section = (id, label, inner, opts = {}) => {
+    sectionCounter++;
+    sections.push({ id, label });
+    const subhead = opts.subhead ? `<div class="section-subhead">${esc(opts.subhead)}</div>` : '';
+    return `<section id="${id}">
+      <div class="section-heading">
+        <span class="num">${String(sectionCounter).padStart(2, '0')}</span>
+        <span>${esc(label)}</span>
+      </div>
+      ${subhead}${inner}
+    </section>`;
+  };
+
+  const pageRef = (p) => p ? `<span class="page-ref">📍 ${esc(p)}</span>` : '';
+  const signClass = (s) => {
+    const t = String(s ?? '');
+    if (/^[+↑]|增|涨/.test(t.trim())) return 'pos';
+    if (/^[-−↓]|降|跌/.test(t.trim())) return 'neg';
+    return '';
+  };
+
+  // ===== Hero =====
+  const meta = data.meta || {};
+  const DOC_TYPES = {
+    paper:           { label: '学术论文',  color: '#2563eb' },
+    tech_report:     { label: '技术报告',  color: '#0d9488' },
+    broker_research: { label: '投行研报',  color: '#B45309' },
+    earnings:        { label: '公司财报',  color: '#7c3aed' },
+    deep_article:    { label: '深度长文',  color: '#db2777' },
+  };
+  const dt = DOC_TYPES[meta.doc_type] || { label: meta.doc_type || '文档', color: '#78716c' };
+  const docBadge = `<span class="badge" style="background: color-mix(in srgb, ${dt.color} 14%, transparent); color: ${dt.color};">${esc(dt.label)}</span>`;
+  const modeBadge = meta.mode === 'unfamiliar'
+    ? '<span class="badge mode-badge">陌生领域 · 系统性学习</span>'
+    : meta.mode === 'familiar'
+    ? '<span class="badge mode-badge">熟悉领域 · 增量获取</span>' : '';
+  const extBadge = meta.extraction_source
+    ? `<span class="ui text-xs text-muted">📄 ${esc(meta.extraction_source)}${meta.extraction_confidence && meta.extraction_confidence !== 'high' ? ` · ⚠ ${esc(meta.extraction_confidence)} 置信度` : ''}</span>` : '';
+
+  const metaBits = [
+    meta.pages && `<span class="text-muted ui text-sm">📑 ${esc(meta.pages)} 页</span>`,
+    meta.publish_date && `<span class="text-muted ui text-sm">📅 ${esc(meta.publish_date)}</span>`,
+    meta.institution && `<span class="text-muted ui text-sm">🏛 ${esc(meta.institution)}</span>`,
+    meta.domain && `<span class="text-muted ui text-sm">🏷 ${esc(meta.domain)}</span>`,
+    meta.language && `<span class="text-muted ui text-sm">🌐 ${esc(meta.language).toUpperCase()}</span>`,
+  ].filter(Boolean).join(' · ');
+
+  const authors = Array.isArray(meta.authors) && meta.authors.length
+    ? `<div class="ui text-sm text-muted mt-3">✍️ ${meta.authors.slice(0, 8).map(esc).join(' · ')}${meta.authors.length > 8 ? ` 等 ${meta.authors.length} 人` : ''}</div>` : '';
+
+  const sourceLink = meta.source_url
+    ? `<a href="${esc(meta.source_url)}" target="_blank" class="ui text-sm accent hover:underline">原文链接 →</a>`
+    : meta.source ? `<span class="ui text-xs text-muted mono">${esc(meta.source)}</span>` : '';
+
+  const heroHTML = `
+    <header class="space-y-4 pb-8" style="border-bottom: 1px solid var(--border);">
+      <div class="flex items-center gap-3 flex-wrap">${docBadge}${modeBadge}${extBadge}</div>
+      <h1 class="hero-title text-3xl md:text-4xl">${esc(meta.title || 'Document Report')}</h1>
+      <div class="flex flex-wrap gap-x-1 gap-y-1 items-center">${metaBits}</div>
+      ${authors}
+      <div class="pt-2">${sourceLink}</div>
+    </header>`;
+
+  // ===== TLDR + worth_reading =====
+  let tldrHTML = '';
+  if (data.tldr) {
+    const wr = data.worth_reading || {};
+    const WORTH = { 'must-read': ['#15803d', '值得精读'], 'worth-skim': ['#ca8a04', '值得略读'], 'reference-only': ['#78716c', '存档备查'] };
+    const w = WORTH[wr.score];
+    const worthRow = wr.score ? `
+      <div class="worth-row">
+        <span class="badge" style="background: color-mix(in srgb, ${w[0]} 14%, transparent); color: ${w[0]};">${w[1]}</span>
+        ${wr.one_liner ? `<span>${esc(wr.one_liner)}</span>` : ''}
+        ${wr.who_should_read ? `<span class="text-muted">· 适合精读原文的人：${esc(wr.who_should_read)}</span>` : ''}
+      </div>` : '<div class="worth-row" style="padding:0 0 16px;"></div>';
+    tldrHTML = section('tldr', '一句话总结',
+      `<div class="tldr-block">${esc(data.tldr)}</div>${worthRow}`);
+  }
+
+  // ===== Narrative (导读故事) =====
+  let narrativeHTML = '';
+  if (data.narrative) {
+    const paras = String(data.narrative).split(/\n\n+/).map(p => `<p>${esc(p.trim())}</p>`).join('');
+    narrativeHTML = section('narrative', '导读故事',
+      `<div class="narrative-block">${paras}</div>`,
+      { subhead: '把整份文档讲成一个连续的故事 · 一个例子贯穿到底 · 读完应能向别人复述。' });
+  }
+
+  // ===== Key numbers =====
+  let knHTML = '';
+  if (Array.isArray(data.key_numbers) && data.key_numbers.length) {
+    const knSize = (v) => { const n = String(v ?? '').length; return n > 24 ? 'kn-sm' : n > 14 ? 'kn-md' : ''; };
+    knHTML = section('key-numbers', '关键数字',
+      `<div class="kn-grid">
+        ${data.key_numbers.map(k => `
+          <div class="kn-card">
+            <div class="kn-metric">${esc(k.metric)}</div>
+            <div class="kn-value ${signClass(k.value)} ${knSize(k.value)}">${esc(k.value)}</div>
+            ${k.context ? `<div class="kn-context">${esc(k.context)}</div>` : ''}
+            ${k.page ? `<div class="kn-page">📍 ${esc(k.page)}</div>` : ''}
+          </div>`).join('')}
+      </div>`,
+      { subhead: '原文里最重要的数字 · 每个都标了出处页码，可回原文核对。' });
+  }
+
+  // ===== Core questions =====
+  let questionsHTML = '';
+  if (Array.isArray(data.core_questions) && data.core_questions.length) {
+    questionsHTML = section('questions', '核心问题',
+      data.core_questions.map((q, i) => `
+        <div class="question-card">
+          <span class="question-num">问题 ${String(i+1).padStart(2,'0')}</span>
+          <div class="question-text">${esc(q.question)}</div>
+          ${q.approach ? `<div class="question-approach"><span class="label-pill">论证路径</span>${esc(q.approach)}</div>` : ''}
+          ${q.answer ? `<div class="question-answer"><span class="label-pill">文档的答案</span>${esc(q.answer)}</div>` : ''}
+        </div>`).join(''),
+      { subhead: '不是结论清单，是这份文档真正在回答的问题。读完每条你应该能复述论证。' });
+  }
+
+  // ===== Type blocks =====
+  let typeHTML = '';
+
+  // ---- paper ----
+  const tp = data._type_paper;
+  if (tp) {
+    let bits = '';
+    if (tp.problem || tp.prior_gap) {
+      bits += `<div class="space-y-0">
+        ${tp.problem ? `<div class="premise"><div class="premise-point">要解决的问题</div><div class="premise-explanation">${esc(tp.problem)}</div></div>` : ''}
+        ${tp.prior_gap ? `<div class="premise"><div class="premise-point">之前的方法卡在哪</div><div class="premise-explanation">${esc(tp.prior_gap)}</div></div>` : ''}
+      </div>`;
+    }
+    if (tp.method) {
+      const m = tp.method;
+      bits += `<div class="mental-block" style="margin-top:24px;">
+        <div class="mental-name">方法：${esc(m.name || '')}</div>
+        ${m.key_idea ? `<div class="application-callout" style="margin-bottom:16px;"><div class="label">核心 idea（一句话）</div><div>${esc(m.key_idea)}</div></div>` : ''}
+        ${m.description ? `<div class="mental-description">${esc(m.description)}</div>` : ''}
+        ${m.mermaid ? `<div class="mermaid-frame"><div class="mermaid">${esc(m.mermaid)}</div></div><div class="mermaid-caption">图：${esc(m.name || '方法结构')}</div>` : ''}
+      </div>`;
+    }
+    if (Array.isArray(tp.results) && tp.results.length) {
+      bits += `<div style="margin-top:8px;">
+        <div class="ui text-xs uppercase tracking-wider text-muted mb-4" style="letter-spacing:0.08em;">主要结果 · 声称 vs 证据</div>
+        ${tp.results.map(rr => `
+          <div class="evidence-card">
+            <div class="evidence-claim">${esc(rr.claim)}
+              ${rr.strength ? `<span class="strength-badge strength-${esc(rr.strength)}">${({strong:'证据强',moderate:'证据中',weak:'证据弱'})[rr.strength] || esc(rr.strength)}</span>` : ''}
+              ${pageRef(rr.page)}
+            </div>
+            ${rr.evidence ? `<div class="evidence-detail">${esc(rr.evidence)}</div>` : ''}
+          </div>`).join('')}
+      </div>`;
+    }
+    if (Array.isArray(tp.limitations) && tp.limitations.length) {
+      bits += `<div class="warn-box"><div class="label">局限性</div><ul>
+        ${tp.limitations.map(l => `<li>${esc(l.point)} <span class="ui text-xs" style="color:var(--muted);">[${l.source === 'analyst' ? '分析者补充' : '作者承认'}]</span></li>`).join('')}
+      </ul></div>`;
+    }
+    if (tp.reproducibility) {
+      bits += `<div class="info-box"><div class="label">可复现性</div><div class="ui text-sm" style="color:var(--fg-secondary); line-height:1.7;">${esc(tp.reproducibility)}</div></div>`;
+    }
+    typeHTML = section('paper', '论文拆解', bits, { subhead: '问题 → 方法 → 证据强度 → 局限。声称和证据分开看。' });
+  }
+
+  // ---- tech_report ----
+  const tt = data._type_tech_report;
+  if (tt) {
+    let bits = '';
+    if (tt.goal) {
+      bits += `<div class="premise"><div class="premise-point">系统目标</div><div class="premise-explanation">${esc(tt.goal)}</div></div>`;
+    }
+    if (tt.architecture) {
+      bits += `<div class="mental-block" style="margin-top:24px;">
+        <div class="mental-name">架构</div>
+        ${tt.architecture.description ? `<div class="mental-description">${esc(tt.architecture.description)}</div>` : ''}
+        ${tt.architecture.mermaid ? `<div class="mermaid-frame"><div class="mermaid">${esc(tt.architecture.mermaid)}</div></div><div class="mermaid-caption">图：系统架构</div>` : ''}
+      </div>`;
+    }
+    if (Array.isArray(tt.key_techniques) && tt.key_techniques.length) {
+      bits += `<div class="ui text-xs uppercase tracking-wider text-muted mb-4" style="letter-spacing:0.08em; margin-top:8px;">关键技术</div>
+        <div class="space-y-0">
+        ${tt.key_techniques.map(k => `
+          <div class="premise">
+            <div class="premise-point">${esc(k.name)}</div>
+            <div class="premise-explanation">${esc(k.what)}${k.why_it_matters ? `<br><span style="color:var(--accent);">为什么关键：</span>${esc(k.why_it_matters)}` : ''}</div>
+          </div>`).join('')}
+        </div>`;
+    }
+    if (Array.isArray(tt.benchmarks) && tt.benchmarks.length) {
+      bits += `<div class="ui text-xs uppercase tracking-wider text-muted mb-3" style="letter-spacing:0.08em; margin-top:24px;">Benchmark 成绩</div>
+        <table class="data-table">
+          <thead><tr><th>Benchmark</th><th>成绩</th><th>对照</th><th>页</th></tr></thead>
+          <tbody>${tt.benchmarks.map(b => `
+            <tr><td>${esc(b.benchmark)}</td><td class="num">${esc(b.result)}</td><td>${esc(b.comparison || '')}</td><td class="num" style="color:var(--muted-soft);">${esc(b.page || '')}</td></tr>`).join('')}
+          </tbody>
+        </table>`;
+    }
+    if (Array.isArray(tt.tradeoffs) && tt.tradeoffs.length) {
+      bits += `<div class="ui text-xs uppercase tracking-wider text-muted mb-4" style="letter-spacing:0.08em; margin-top:24px;">工程取舍</div>
+        ${tt.tradeoffs.map(t => `
+          <div class="premise"><div class="premise-point">${esc(t.decision)}</div><div class="premise-explanation">${esc(t.rationale)}</div></div>`).join('')}`;
+    }
+    if (Array.isArray(tt.whats_not_said) && tt.whats_not_said.length) {
+      bits += `<div class="warn-box"><div class="label">报告没说的</div><ul>${tt.whats_not_said.map(w => `<li>${esc(w)}</li>`).join('')}</ul></div>`;
+    }
+    typeHTML = section('tech-report', '技术报告拆解', bits,
+      { subhead: '技术报告不经同行评审：说了的基本真，没说的才是问题。' });
+  }
+
+  // ---- broker_research ----
+  const tb = data._type_broker_research;
+  if (tb) {
+    let bits = '';
+    const ratingItems = [
+      tb.rating && `<div class="rating-item"><div class="rlabel">评级</div><div class="rvalue accent">${esc(tb.rating)}</div></div>`,
+      tb.target_price && `<div class="rating-item"><div class="rlabel">目标价</div><div class="rvalue mono">${esc(tb.target_price)}</div></div>`,
+      tb.current_price && `<div class="rating-item"><div class="rlabel">现价</div><div class="rvalue mono" style="font-size:20px; color:var(--fg-secondary);">${esc(tb.current_price)}</div></div>`,
+      tb.upside && `<div class="rating-item"><div class="rlabel">隐含空间</div><div class="rvalue mono ${signClass(tb.upside)}">${esc(tb.upside)}</div></div>`,
+      tb.horizon && `<div class="rating-item"><div class="rlabel">期限</div><div class="rvalue" style="font-size:18px; color:var(--fg-secondary);">${esc(tb.horizon)}</div></div>`,
+    ].filter(Boolean).join('');
+    if (ratingItems) bits += `<div class="rating-box">${ratingItems}</div>`;
+    if (tb.thesis) {
+      bits += `<div class="mental-block" style="margin-top:32px;">
+        <div class="mental-name">投资逻辑链</div>
+        ${tb.thesis.summary ? `<div class="mental-description">${esc(tb.thesis.summary)}</div>` : ''}
+        ${tb.thesis.mermaid ? `<div class="mermaid-frame"><div class="mermaid">${esc(tb.thesis.mermaid)}</div></div><div class="mermaid-caption">图：投资逻辑链 · 每一环对应下方一个关键假设</div>` : ''}
+      </div>`;
+    }
+    if (Array.isArray(tb.key_assumptions) && tb.key_assumptions.length) {
+      bits += `<div class="ui text-xs uppercase tracking-wider text-muted mb-4" style="letter-spacing:0.08em;">关键假设 · 目标价拆解</div>
+        ${tb.key_assumptions.map(a => `
+          <div class="evidence-card">
+            <div class="evidence-claim">${esc(a.assumption)}
+              ${a.confidence ? `<span class="strength-badge strength-${esc(a.confidence)}">${({strong:'依据强',moderate:'依据中',weak:'依据弱'})[a.confidence] || esc(a.confidence)}</span>` : ''}
+            </div>
+            ${a.basis ? `<div class="evidence-detail"><b>依据：</b>${esc(a.basis)}</div>` : ''}
+            ${a.risk_if_wrong ? `<div class="evidence-detail" style="color:var(--red);"><b>若不成立：</b>${esc(a.risk_if_wrong)}</div>` : ''}
+          </div>`).join('')}`;
+    }
+    if (Array.isArray(tb.earnings_forecast) && tb.earnings_forecast.length) {
+      bits += `<div class="ui text-xs uppercase tracking-wider text-muted mb-3" style="letter-spacing:0.08em; margin-top:24px;">盈利预测</div>
+        <table class="data-table">
+          <thead><tr><th>年份</th><th>营收</th><th>同比</th><th>归母净利</th><th>同比</th><th>PE</th></tr></thead>
+          <tbody>${tb.earnings_forecast.map(f => `
+            <tr><td class="num">${esc(f.year)}</td><td class="num">${esc(f.revenue || '')}</td>
+            <td class="num ${signClass(f.yoy)}">${esc(f.yoy || '')}</td><td class="num">${esc(f.net_profit || '')}</td>
+            <td class="num ${signClass(f.profit_yoy)}">${esc(f.profit_yoy || '')}</td><td class="num">${esc(f.pe || '')}</td></tr>`).join('')}
+          </tbody>
+        </table>`;
+    }
+    if (tb.valuation) {
+      const v = tb.valuation;
+      bits += `<div class="info-box"><div class="label">估值方法</div>
+        <div class="ui text-sm" style="color:var(--fg-secondary); line-height:1.7;">
+          ${v.method ? `<b>${esc(v.method)}</b> · ` : ''}${esc(v.detail || '')}
+          ${v.vs_peers ? `<br><b>可比公司：</b>${esc(v.vs_peers)}` : ''}
+        </div></div>`;
+    }
+    if (Array.isArray(tb.catalysts) && tb.catalysts.length) {
+      bits += `<div class="ui text-xs uppercase tracking-wider text-muted mb-2" style="letter-spacing:0.08em; margin-top:24px;">催化剂</div>
+        <div>${tb.catalysts.map(c => `<div class="quickstart-item"><span class="check">⚡</span><span>${esc(c)}</span></div>`).join('')}</div>`;
+    }
+    if (Array.isArray(tb.risks) && tb.risks.length) {
+      bits += `<div class="ui text-xs uppercase tracking-wider text-muted mb-2" style="letter-spacing:0.08em; margin-top:24px;">风险（报告自列）</div>
+        <div>${tb.risks.map(rk => `
+          <div class="quickstart-item"><span class="dot dot-${rk.severity === 'high' ? 'red' : rk.severity === 'medium' ? 'yellow' : 'info'}" style="margin-top:7px;"></span><span>${esc(rk.risk)}</span></div>`).join('')}</div>`;
+    }
+    if (tb.bias_check) {
+      bits += `<div class="warn-box"><div class="label">卖方偏差提醒（分析者注）</div><div class="body">${esc(tb.bias_check)}</div></div>`;
+    }
+    typeHTML = section('broker', '研报拆解', bits,
+      { subhead: '事实和数据可以用，观点和目标价要打折 — 评级四件套、逻辑链、关键假设、偏差提醒。' });
+  }
+
+  // ---- earnings ----
+  const te = data._type_earnings;
+  if (te) {
+    let bits = '';
+    if (te.period) {
+      bits += `<div class="ui text-sm text-muted mb-4">报告期：<b style="color:var(--fg);">${esc(te.period)}</b></div>`;
+    }
+    if (Array.isArray(te.snapshot) && te.snapshot.length) {
+      bits += `<table class="data-table">
+        <thead><tr><th>指标</th><th>本期</th><th>同比</th><th>备注</th></tr></thead>
+        <tbody>${te.snapshot.map(s => `
+          <tr><td>${esc(s.metric)}</td><td class="num" style="font-weight:700;">${esc(s.value)}</td>
+          <td class="num ${signClass(s.yoy)}">${esc(s.yoy || '')}</td><td class="ui text-xs" style="color:var(--muted);">${esc(s.note || '')}</td></tr>`).join('')}
+        </tbody>
+      </table>`;
+    }
+    if (Array.isArray(te.segments) && te.segments.length) {
+      bits += `<div class="ui text-xs uppercase tracking-wider text-muted mb-3" style="letter-spacing:0.08em; margin-top:28px;">分部表现</div>
+        <table class="data-table">
+          <thead><tr><th>分部</th><th>营收</th><th>同比</th><th>占比</th><th>点评</th></tr></thead>
+          <tbody>${te.segments.map(s => `
+            <tr><td>${esc(s.name)}</td><td class="num">${esc(s.revenue)}</td>
+            <td class="num ${signClass(s.yoy)}">${esc(s.yoy || '')}</td><td class="num">${esc(s.share || '')}</td>
+            <td class="ui text-xs" style="color:var(--muted);">${esc(s.comment || '')}</td></tr>`).join('')}
+          </tbody>
+        </table>`;
+    }
+    if (Array.isArray(te.drivers) && te.drivers.length) {
+      bits += `<div class="ui text-xs uppercase tracking-wider text-muted mb-4" style="letter-spacing:0.08em; margin-top:28px;">驱动因素</div>
+        ${te.drivers.map(d => `
+          <div class="premise" style="border-left-color: ${d.direction === 'down' ? 'var(--red)' : 'var(--green)'};">
+            <div class="premise-point">${d.direction === 'down' ? '↓' : '↑'} ${esc(d.driver)}</div>
+            <div class="premise-explanation">${esc(d.detail)}</div>
+          </div>`).join('')}`;
+    }
+    if (te.guidance) {
+      bits += `<div class="application-callout"><div class="label">管理层指引</div><div>${esc(te.guidance)}</div></div>`;
+    }
+    if (te.management_tone) {
+      bits += `<div class="info-box"><div class="label">叙事 vs 数字</div><div class="ui text-sm" style="color:var(--fg-secondary); line-height:1.7;">${esc(te.management_tone)}</div></div>`;
+    }
+    if (Array.isArray(te.fine_print) && te.fine_print.length) {
+      bits += `<div class="ui text-xs uppercase tracking-wider text-muted mb-2" style="letter-spacing:0.08em; margin-top:28px;">小字里的发现（附注/风险因素）</div>
+        <div>${te.fine_print.map(f => `
+          <div class="quickstart-item">
+            <span class="dot dot-${esc(f.severity || 'info')}"></span>
+            <span><b>${esc(f.find)}</b>${f.why_it_matters ? ` — ${esc(f.why_it_matters)}` : ''}${pageRef(f.page)}</span>
+          </div>`).join('')}</div>`;
+    }
+    typeHTML = section('earnings', '财报拆解', bits,
+      { subhead: '数字基本可信，叙事是管理层写的软文 — 抓数字、抓变化、抓小字。' });
+  }
+
+  // ---- deep_article ----
+  const ta = data._type_deep_article;
+  if (ta) {
+    let bits = '';
+    if (ta.thesis) {
+      bits += `<div class="application-callout" style="margin-bottom:24px;"><div class="label">核心主张</div><div style="font-family:var(--serif); font-size:18px; font-weight:600; line-height:1.5;">${esc(ta.thesis)}</div></div>`;
+    }
+    if (ta.argument_chain) {
+      bits += `<div class="mental-block">
+        <div class="mental-name">论证链</div>
+        ${ta.argument_chain.summary ? `<div class="mental-description">${esc(ta.argument_chain.summary)}</div>` : ''}
+        ${ta.argument_chain.mermaid ? `<div class="mermaid-frame"><div class="mermaid">${esc(ta.argument_chain.mermaid)}</div></div><div class="mermaid-caption">图：从问题到结论的论证路径</div>` : ''}
+      </div>`;
+    }
+    if (Array.isArray(ta.key_points) && ta.key_points.length) {
+      const ST = { firsthand: ['一手经验', 'strong'], cited: ['引用', 'moderate'], speculation: ['推测', 'weak'] };
+      bits += `<div class="ui text-xs uppercase tracking-wider text-muted mb-4" style="letter-spacing:0.08em;">主要论点 · 各自的支撑</div>
+        ${ta.key_points.map(k => {
+          const st = ST[k.support_type];
+          return `<div class="evidence-card">
+            <div class="evidence-claim">${esc(k.point)}
+              ${st ? `<span class="strength-badge strength-${st[1]}">${st[0]}</span>` : ''}
+              ${pageRef(k.page)}
+            </div>
+            ${k.support ? `<div class="evidence-detail">${esc(k.support)}</div>` : ''}
+          </div>`;
+        }).join('')}`;
+    }
+    if (ta.author_stance) {
+      bits += `<div class="info-box"><div class="label">作者立场（分析者注）</div><div class="ui text-sm" style="color:var(--fg-secondary); line-height:1.7;">${esc(ta.author_stance)}</div></div>`;
+    }
+    if (Array.isArray(ta.practical_takeaways) && ta.practical_takeaways.length) {
+      bits += `<div class="ui text-xs uppercase tracking-wider text-muted mb-2" style="letter-spacing:0.08em; margin-top:24px;">可直接上手的</div>
+        <div>${ta.practical_takeaways.map(t => `<div class="quickstart-item"><span class="check">⚒</span><span>${esc(t)}</span></div>`).join('')}</div>`;
+    }
+    typeHTML = section('deep-article', '长文拆解', bits,
+      { subhead: '无同评无监管 — 可信度取决于作者是谁、立场在哪。主张和支撑分开看。' });
+  }
+
+  // ===== Reading map =====
+  let rmapHTML = '';
+  if (Array.isArray(data.reading_map) && data.reading_map.length) {
+    const V = { deep: '精读', skim: '略读', skip: '跳过' };
+    rmapHTML = section('reading-map', '原文导读地图',
+      `<div>${data.reading_map.map(s => `
+        <div class="rmap-item">
+          <span class="rmap-pages">${esc(s.pages)}</span>
+          <span class="rmap-verdict v-${esc(s.verdict)}">${V[s.verdict] || esc(s.verdict)}</span>
+          <div class="rmap-body">
+            <div class="rmap-section">${esc(s.section)}</div>
+            ${s.summary ? `<div class="rmap-summary">${esc(s.summary)}</div>` : ''}
+            ${s.why ? `<div class="rmap-why">${esc(s.why)}</div>` : ''}
+          </div>
+        </div>`).join('')}</div>`,
+      { subhead: '要回原文时按这张地图跳读，不要从第一页开始。' });
+  }
+
+  // ===== Unfamiliar mode =====
+  let unfamiliarHTML = '';
+  const u = data._unfamiliar_mode;
+  if (u && meta.mode === 'unfamiliar') {
+    let bits = '';
+    if (Array.isArray(u.basics) && u.basics.length) {
+      bits += section('basics', '基础共识',
+        `<div class="space-y-0">${u.basics.map(b => `
+          <div class="premise">
+            <div class="premise-point">${esc(b.point)}</div>
+            <div class="premise-explanation">${esc(b.explanation)}</div>
+          </div>`).join('')}</div>`,
+        { subhead: '读懂这份文档需要的领域前提。读完应该没有「这是什么」的问题。' });
+    }
+    if (Array.isArray(u.mental_models) && u.mental_models.length) {
+      bits += section('mental-models', '心智模型',
+        u.mental_models.map((m, i) => `
+          <div class="mental-block">
+            <div class="mental-name">${String(i+1).padStart(2,'0')} · ${esc(m.name)}</div>
+            <div class="mental-description">${esc(m.description)}</div>
+            ${m.mermaid ? `<div class="mermaid-frame"><div class="mermaid">${esc(m.mermaid)}</div></div><div class="mermaid-caption">图：${esc(m.name)}</div>` : ''}
+            ${m.how_to_apply ? `<div class="application-callout"><div class="label">如何应用</div><div>${esc(m.how_to_apply)}</div></div>` : ''}
+          </div>`).join(''),
+        { subhead: '理解这份文档的思维框架 · 用图说话。' });
+    }
+    if (Array.isArray(u.playbooks) && u.playbooks.length) {
+      bits += section('playbooks', '执行手册',
+        u.playbooks.map(p => `
+          <div class="playbook-block">
+            <div class="playbook-name">${esc(p.name)}</div>
+            ${p.when_to_use ? `<div class="playbook-when">何时用：${esc(p.when_to_use)}</div>` : ''}
+            <ol class="step-list">${(p.steps||[]).map(s => `
+              <li class="step-item"><div class="step-title">${esc(s.title)}</div><div class="step-detail">${esc(s.detail)}</div></li>`).join('')}</ol>
+            ${Array.isArray(p.pitfalls) && p.pitfalls.length ? `
+              <div class="warn-box"><div class="label">常见坑</div><ul>${p.pitfalls.map(pt => `<li>${esc(pt)}</li>`).join('')}</ul></div>` : ''}
+          </div>`).join(''),
+        { subhead: '文档里可照做的流程 · 含适用场景和坑。' });
+    }
+    if (Array.isArray(u.quick_start) && u.quick_start.length) {
+      bits += section('quickstart', '快速应用',
+        `<div>${u.quick_start.map(q => `
+          <div class="quickstart-item"><span class="check">✓</span><span>${esc(q)}</span></div>`).join('')}</div>`,
+        { subhead: '读完下周可以立刻做的事 · 具体到一个动作。' });
+    }
+    unfamiliarHTML = bits;
+  }
+
+  // ===== Familiar mode =====
+  let familiarHTML = '';
+  const f = data._familiar_mode;
+  if (f && meta.mode === 'familiar') {
+    let bits = '';
+    if (Array.isArray(f.increments) && f.increments.length) {
+      bits += section('increments', '增量信息',
+        f.increments.map(i => `
+          <div class="premise">
+            <div class="premise-point">${esc(i.fact)} ${pageRef(i.page)}</div>
+            <div class="premise-explanation"><span class="label-pill" style="display:inline;">为什么新</span> ${esc(i.why_new)}</div>
+          </div>`).join(''),
+        { subhead: '新数据、新口径、首次披露 · 标注「为什么对行内人是新的」。' });
+    }
+    if (Array.isArray(f.new_takes) && f.new_takes.length) {
+      bits += section('new-takes', '新观点',
+        f.new_takes.map(t => `
+          <div class="premise">
+            <div class="premise-point">${esc(t.take)}</div>
+            <div class="premise-explanation"><span class="label-pill" style="display:inline;">vs 主流</span> ${esc(t.vs_mainstream)}</div>
+          </div>`).join(''),
+        { subhead: '反共识或少见角度的看法。' });
+    }
+    if (Array.isArray(f.insights) && f.insights.length) {
+      bits += section('insights', '启发',
+        f.insights.map(i => `
+          <div class="premise" style="border-left-color: var(--accent);">
+            <div class="premise-point">💡 ${esc(i.insight)}</div>
+            ${i.implications ? `<div class="premise-explanation">${esc(i.implications)}</div>` : ''}
+          </div>`).join(''));
+    }
+    if (Array.isArray(f.tensions) && f.tensions.length) {
+      bits += section('tensions', '冲突点',
+        f.tensions.map(t => `
+          <div class="playbook-block">
+            <div class="playbook-name">${esc(t.point)}</div>
+            <div class="grid md:grid-cols-2 gap-4 mt-4">
+              <div class="p-4 rounded" style="background: var(--border-soft);">
+                <span class="label-pill">原有认知</span>
+                <div class="text-sm" style="color: var(--fg-secondary);">${esc(t.your_prior)}</div>
+              </div>
+              <div class="p-4 rounded" style="background: var(--accent-bg);">
+                <span class="label-pill">文档观点</span>
+                <div class="text-sm">${esc(t.doc_view)}</div>
+              </div>
+            </div>
+          </div>`).join(''));
+    }
+    if (Array.isArray(f.open_questions) && f.open_questions.length) {
+      bits += section('open-questions', '待深挖问题',
+        `<div>${f.open_questions.map(q => `
+          <div class="quickstart-item"><span class="check">?</span><span>${esc(q)}</span></div>`).join('')}</div>`);
+    }
+    familiarHTML = bits;
+  }
+
+  // ===== Critical lens =====
+  let lensHTML = '';
+  const cl = data.critical_lens;
+  if (cl && ((cl.strengths||[]).length || (cl.weaknesses||[]).length || (cl.what_to_verify||[]).length)) {
+    let bits = '';
+    if ((cl.strengths||[]).length || (cl.weaknesses||[]).length) {
+      bits += `<div class="lens-grid">
+        <div class="lens-col" style="border-top: 3px solid var(--green);">
+          <div class="ltitle" style="color: var(--green);">做得扎实的</div>
+          <ul>${(cl.strengths||[]).map(s => `<li>${esc(s)}</li>`).join('')}</ul>
+        </div>
+        <div class="lens-col" style="border-top: 3px solid var(--red);">
+          <div class="ltitle" style="color: var(--red);">薄弱的</div>
+          <ul>${(cl.weaknesses||[]).map(w => `<li>${esc(w)}</li>`).join('')}</ul>
+        </div>
+      </div>`;
+    }
+    if ((cl.what_to_verify||[]).length) {
+      bits += `<div class="ui text-xs uppercase tracking-wider text-muted mb-2" style="letter-spacing:0.08em; margin-top:28px;">采用结论前，先验证这些</div>
+        <div>${cl.what_to_verify.map(v => `
+          <div class="quickstart-item"><span class="check">🔍</span>
+            <span><b>${esc(v.item)}</b>${v.how ? `<br><span class="ui text-sm" style="color:var(--muted);">怎么验：${esc(v.how)}</span>` : ''}</span>
+          </div>`).join('')}</div>`;
+    }
+    lensHTML = section('critical-lens', '批判性阅读', bits,
+      { subhead: '这份文档哪里扎实、哪里薄弱、用它的结论前该验证什么 — 分析者视角，不是文档的话。' });
+  }
+
+  // ===== The one insight (带走一句) =====
+  let insightHTML = '';
+  if (data.the_one_insight) {
+    insightHTML = section('one-insight', '带走一句',
+      `<div class="insight-hero">
+        <div class="ilabel">如果整份报告只记一句话</div>
+        <div class="itext">${esc(data.the_one_insight)}</div>
+      </div>`,
+      { subhead: '蒸馏，不是压缩 — 离开这份文档它也该单独成立。' });
+  }
+
+  // ===== Quotes =====
+  let quotesHTML = '';
+  if (Array.isArray(data.quotes) && data.quotes.length) {
+    quotesHTML = section('quotes', '原文金句',
+      data.quotes.slice(0, 5).map(q => `
+        <div class="pullquote">
+          <div class="pullquote-text">${esc(q.text)}</div>
+          <div class="pullquote-attribution ui">${q.page ? `📍 <span class="mono">${esc(q.page)}</span>` : ''}</div>
+          ${q.note ? `<div class="pullquote-note">${esc(q.note)}</div>` : ''}
+        </div>`).join(''),
+      { subhead: '原文照抄 · 选「脱离上下文也成立」的句子。' });
+  }
+
+  // ===== References =====
+  let referencesHTML = '';
+  const refs = data.references || {};
+  const glossary = refs.glossary || [];
+  const furtherReading = refs.further_reading || [];
+  if (glossary.length || furtherReading.length) {
+    let inner = '';
+    if (glossary.length) {
+      inner += `<div class="mb-8">
+        <div class="ui text-xs uppercase tracking-wider text-muted mb-3" style="letter-spacing: 0.08em;">术语表</div>
+        <div>${glossary.map(g => `
+          <div class="glossary-row">
+            <div class="glossary-term">${esc(g.term)}</div>
+            <div class="glossary-definition">${esc(g.definition)}</div>
+          </div>`).join('')}</div>
+      </div>`;
+    }
+    if (furtherReading.length) {
+      inner += `<div>
+        <div class="ui text-xs uppercase tracking-wider text-muted mb-3" style="letter-spacing: 0.08em;">延伸阅读</div>
+        <div>${furtherReading.map(r => `
+          <div class="reading-item">
+            <span class="reading-type">${esc(r.type)}</span>
+            <div><div class="reading-name">${esc(r.name)}</div>
+            ${r.note ? `<div class="reading-note">${esc(r.note)}</div>` : ''}</div>
+          </div>`).join('')}</div>
+      </div>`;
+    }
+    referencesHTML = section('references', '参考资料', inner, { subhead: '术语表 + 延伸阅读 · 末尾参考用。' });
+  }
+
+  root.innerHTML = heroHTML + tldrHTML + narrativeHTML + knHTML + questionsHTML + typeHTML + rmapHTML
+    + unfamiliarHTML + familiarHTML + lensHTML + insightHTML + quotesHTML + referencesHTML;
+
+  tocEl.innerHTML = sections.map((s, i) => `
+    <a href="#${s.id}" class="toc-link">
+      <span class="mono text-muted" style="font-size: 11px;">${String(i+1).padStart(2,'0')}</span>
+      &nbsp;${esc(s.label)}
+    </a>`).join('');
+
+  renderFlowcharts(root);
+
+  const links = Array.from(tocEl.querySelectorAll('a'));
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + e.target.id));
+      }
+    });
+  }, { rootMargin: '-30% 0px -60% 0px' });
+  document.querySelectorAll('section[id]').forEach(s => observer.observe(s));
+
+  // ====== 流程图渲染器:flowchart 源码 → 卡片 + SVG 箭头(替代 mermaid) ======
+  function renderFlowcharts(scope) {
+    (scope || document).querySelectorAll('.mermaid').forEach(function (host) {
+      if (host.dataset.fcDone) return;
+      const src = host.textContent || '';
+      const head = src.trim().split('\n')[0].trim();
+      if (!/^(flowchart|graph)\s+/i.test(head)) return; // 只处理流程图,其它原样留着
+      const g = fcParse(src);
+      if (!g || g.order.length === 0) return;
+      host.dataset.fcDone = '1';
+      fcDraw(host, g);
+    });
+  }
+
+  function fcParse(src) {
+    const lines = src.trim().split('\n');
+    let dir = 'TD';
+    const nodes = {}, order = [], edges = [];
+    function tok(t) {
+      t = t.trim();
+      const m = t.match(/^([A-Za-z0-9_]+)\s*(?:\[([^\]]*)\]|\{([^}]*)\}|\(([^)]*)\))?$/);
+      if (!m) return null;
+      const id = m[1];
+      const label = (m[2] != null ? m[2] : m[3] != null ? m[3] : m[4]);
+      const shape = m[3] != null ? 'decision' : 'rect';
+      if (!nodes[id]) { nodes[id] = { id: id, label: label || id, shape: shape }; order.push(id); }
+      else if (label) { nodes[id].label = label; if (shape === 'decision') nodes[id].shape = 'decision'; }
+      return id;
+    }
+    lines.forEach(function (raw) {
+      const line = raw.trim();
+      if (!line) return;
+      const fm = line.match(/^(?:flowchart|graph)\s+(TD|TB|LR|RL)/i);
+      if (fm) { dir = fm[1].toUpperCase(); return; }
+      const em = line.match(/^(.+?)\s*--+>\s*(?:\|([^|]*)\|\s*)?(.+)$/);
+      if (em) { const a = tok(em[1]); const b = tok(em[3]); if (a && b) edges.push({ a: a, b: b, lbl: (em[2] || '').trim() }); }
+      else { tok(line); }
+    });
+    return { dir: dir === 'TB' ? 'TD' : dir, nodes: nodes, order: order, edges: edges };
+  }
+
+  function fcLayers(g) {
+    const L = {}; g.order.forEach(function (id) { L[id] = 0; });
+    let changed = true, guard = 0;
+    while (changed && guard++ < 300) {
+      changed = false;
+      g.edges.forEach(function (e) { if (L[e.b] < L[e.a] + 1) { L[e.b] = L[e.a] + 1; changed = true; } });
+    }
+    const layers = [];
+    g.order.forEach(function (id) { (layers[L[id]] = layers[L[id]] || []).push(id); });
+    return layers;
+  }
+
+  function fcDraw(host, g) {
+    const lr = (g.dir === 'LR' || g.dir === 'RL');
+    const layers = fcLayers(g);
+    host.textContent = '';
+    host.style.position = 'relative';
+    host.style.width = '100%';
+    const SVGNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(SVGNS, 'svg');
+    svg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;overflow:visible';
+    const mid = 'fcah' + Math.random().toString(36).slice(2);
+    const defs = document.createElementNS(SVGNS, 'defs');
+    defs.innerHTML = '<marker id="' + mid + '" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="context-stroke"/></marker>';
+    svg.appendChild(defs);
+    host.appendChild(svg);
+
+    const flow = document.createElement('div');
+    flow.style.cssText = 'position:relative;z-index:1;display:flex;gap:' + (lr ? '48px' : '32px') + ';' +
+      (lr ? 'flex-direction:row;align-items:center' : 'flex-direction:column;align-items:stretch');
+    const el = {};
+    layers.forEach(function (layer) {
+      const band = document.createElement('div');
+      band.style.cssText = 'display:flex;gap:18px;justify-content:center;flex-wrap:wrap;' + (lr ? 'flex-direction:column' : 'flex-direction:row');
+      (layer || []).forEach(function (id) {
+        const n = g.nodes[id];
+        const dec = n.shape === 'decision';
+        const card = document.createElement('div');
+        card.style.cssText = 'box-sizing:border-box;width:' + (lr ? '160px' : '200px') + ';padding:11px 14px;border-radius:' +
+          (dec ? '13px' : '10px') + ';font-size:13.5px;line-height:1.5;background:' + (dec ? 'var(--accent-bg)' : 'var(--bg-card)') +
+          ';color:var(--fg);border:1px solid ' + (dec ? 'var(--accent)' : 'var(--border)') + ';' +
+          (dec ? '' : 'border-left:3px solid var(--accent);') +
+          'box-shadow:0 1px 2px rgba(0,0,0,.04),0 8px 18px -12px rgba(0,0,0,.22);text-align:' + (dec ? 'center' : 'left') + ';white-space:normal';
+        card.innerHTML = (dec ? '<div style="font:600 10px var(--sans);letter-spacing:.1em;color:var(--accent);opacity:.85;margin-bottom:3px">判断</div>' : '') +
+          fcEsc(n.label).replace(/&lt;br\s*\/?&gt;/gi, '<br>');
+        band.appendChild(card);
+        el[id] = card;
+      });
+      flow.appendChild(band);
+    });
+    host.appendChild(flow);
+
+    function draw() {
+      const hb = host.getBoundingClientRect();
+      if (!hb.width) return;
+      svg.setAttribute('viewBox', '0 0 ' + hb.width + ' ' + hb.height);
+      Array.prototype.forEach.call(svg.querySelectorAll('.fce'), function (n) { n.remove(); });
+      g.edges.forEach(function (e) {
+        const A = el[e.a], B = el[e.b]; if (!A || !B) return;
+        const a = A.getBoundingClientRect(), b = B.getBoundingClientRect();
+        let x1, y1, x2, y2, d;
+        if (lr) { x1 = a.right - hb.left; y1 = a.top + a.height / 2 - hb.top; x2 = b.left - hb.left; y2 = b.top + b.height / 2 - hb.top; const mx = (x1 + x2) / 2; d = 'M' + x1 + ',' + y1 + ' C' + mx + ',' + y1 + ' ' + mx + ',' + y2 + ' ' + (x2 - 2) + ',' + y2; }
+        else { x1 = a.left + a.width / 2 - hb.left; y1 = a.bottom - hb.top; x2 = b.left + b.width / 2 - hb.left; y2 = b.top - hb.top; const my = (y1 + y2) / 2; d = 'M' + x1 + ',' + y1 + ' C' + x1 + ',' + my + ' ' + x2 + ',' + my + ' ' + x2 + ',' + (y2 - 2); }
+        const p = document.createElementNS(SVGNS, 'path');
+        p.setAttribute('class', 'fce'); p.setAttribute('d', d); p.setAttribute('fill', 'none');
+        p.style.stroke = 'var(--muted-soft)'; p.setAttribute('stroke-width', '1.7'); p.setAttribute('marker-end', 'url(#' + mid + ')');
+        svg.appendChild(p);
+        if (e.lbl) {
+          const mx = (x1 + x2) / 2, my = (y1 + y2) / 2, tw = e.lbl.length * 13 + 14;
+          const r = document.createElementNS(SVGNS, 'rect');
+          r.setAttribute('class', 'fce'); r.setAttribute('x', mx - tw / 2); r.setAttribute('y', my - 11); r.setAttribute('width', tw); r.setAttribute('height', 21); r.setAttribute('rx', 10);
+          r.style.fill = 'var(--bg)'; r.style.stroke = 'var(--border)';
+          const t = document.createElementNS(SVGNS, 'text');
+          t.setAttribute('class', 'fce'); t.setAttribute('x', mx); t.setAttribute('y', my + 4); t.setAttribute('text-anchor', 'middle'); t.setAttribute('font-size', '12.5');
+          t.style.fill = 'var(--muted)'; t.setAttribute('font-family', 'var(--sans)'); t.textContent = e.lbl;
+          svg.appendChild(r); svg.appendChild(t);
+        }
+      });
+    }
+    requestAnimationFrame(function () { requestAnimationFrame(draw); });
+    if (window.ResizeObserver) { new ResizeObserver(function () { requestAnimationFrame(draw); }).observe(host); }
+    window.addEventListener('resize', draw);
+  }
+
+  function fcEsc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
+</script>
+
+<script>
+(function(){
+var p=document.getElementById('mtprog'),tb=document.getElementById('mttoc'),
+    tp=document.getElementById('mttop'),sh=document.getElementById('mtsheet'),
+    ln=document.getElementById('mtlinks');
+function onScroll(){
+  var d=document.documentElement,m=d.scrollHeight-window.innerHeight,y=window.scrollY;
+  p.style.width=(m>0?Math.min(100,y/m*100):0)+'%';
+  tp.classList.toggle('show',y>600);
+  document.documentElement.classList.toggle('mt-scrolled',y>80);
+}
+window.addEventListener('scroll',onScroll,{passive:true});onScroll();
+tp.addEventListener('click',function(){window.scrollTo({top:0,behavior:'smooth'})});
+function fill(){
+  ln.innerHTML='';var seen={};
+  var as=document.querySelectorAll('#toc a[href^="#"], nav a[href^="#"]');
+  for(var i=0;i<as.length;i++){
+    var a=as[i],h=a.getAttribute('href');
+    if(!h||h==='#'||h==='#top'||seen[h])continue;
+    if(!document.getElementById(h.slice(1)))continue;
+    seen[h]=1;
+    var b=document.createElement('a');b.href=h;
+    b.textContent=a.textContent.replace(/\s+/g,' ').trim();
+    b.addEventListener('click',function(){sh.hidden=true});
+    ln.appendChild(b);
+  }
+  if(!ln.children.length){
+    var b2=document.createElement('a');b2.href='#top';b2.textContent='回到顶部';
+    b2.addEventListener('click',function(){sh.hidden=true});ln.appendChild(b2);
+  }
+}
+tb.addEventListener('click',function(){fill();sh.hidden=false});
+sh.addEventListener('click',function(e){if(e.target===sh)sh.hidden=true});
+document.getElementById('mtclose').addEventListener('click',function(){sh.hidden=true});
+function polish(){
+  document.querySelectorAll('a').forEach(function(a){
+    if(a.textContent.replace(/\s+/g,' ').trim()===('AI Podcast '+'Listener')){
+      a.textContent='Valley Beacon 深读';
+      a.setAttribute('aria-label','Valley Beacon 深读');
+    }
+  });
+  var raw=document.getElementById('report-data');
+  if(!raw) return;
+  var data;
+  try{data=JSON.parse(raw.textContent)}catch(e){return}
+  var meta=data.meta||{};
+  if(!meta.original_title||meta.original_title===meta.title) return;
+  function insertOriginal(){
+    if(document.querySelector('.mt-original-title')) return;
+    var h=document.querySelector('.hero-title,h1');
+    if(!h) return;
+    var p=document.createElement('p');
+    p.className='mt-original-title';
+    p.textContent=meta.original_title;
+    h.insertAdjacentElement('afterend',p);
+  }
+  insertOriginal();
+  requestAnimationFrame(insertOriginal);
+  setTimeout(insertOriginal,300);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',polish);
+else polish();
+})();
+</script>
+</body>
+</html>

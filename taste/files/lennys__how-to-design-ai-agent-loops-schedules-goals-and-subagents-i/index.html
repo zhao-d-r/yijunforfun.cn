@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>如何设计 AI Agent 循环：schedule、goal 与 Claude Code/Codex 子代理</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- 自绘流程图渲染器(见 renderFlowcharts):读 .mermaid 里的 flowchart 源码,
+     解析→分层布局→卡片+SVG 箭头。不再加载 mermaid CDN(更好看 + 去掉 loose XSS 面)。 -->
+<style>
+  /* ====== Claude-inspired design tokens ====== */
+  :root {
+    --bg: #fafaf7;
+    --bg-card: #ffffff;
+    --fg: #1c1917;
+    --fg-secondary: #44403c;
+    --muted: #78716c;
+    --muted-soft: #a8a29e;
+    --accent: #B45309;          /* amber-700, 暖石头色 */
+    --accent-bg: #fef3c7;       /* amber-100 */
+    --accent-bg-dark: #fbbf24;  /* amber-400 */
+    --border: #e7e5e4;
+    --border-soft: #f5f5f4;
+    --serif: 'Charter', 'Iowan Old Style', 'PingFang SC', 'Noto Serif SC', Georgia, serif;
+    --sans: ui-sans-serif, system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  }
+  html.dark {
+    --bg: #0c0a09;
+    --bg-card: #1c1917;
+    --fg: #f5f5f4;
+    --fg-secondary: #d6d3d1;
+    --muted: #a8a29e;
+    --muted-soft: #78716c;
+    --accent: #fbbf24;
+    --accent-bg: #422006;
+    --border: #292524;
+    --border-soft: #1c1917;
+  }
+  html, body { background: var(--bg); color: var(--fg); }
+  body {
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.75;
+    font-feature-settings: "kern", "liga", "calt";
+  }
+  .ui { font-family: var(--sans); }
+  .mono { font-family: var(--mono); font-feature-settings: "tnum"; }
+  .text-muted { color: var(--muted); }
+  .text-secondary { color: var(--fg-secondary); }
+  .accent { color: var(--accent); }
+  .accent-bg { background: var(--accent-bg); }
+  .border-accent { border-color: var(--accent); }
+
+  /* ====== Components ====== */
+
+  /* Hero */
+  .hero-title {
+    font-family: var(--serif);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
+
+  /* Mode badge */
+  .mode-badge {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 4px;
+    background: var(--accent-bg);
+    color: var(--accent);
+    display: inline-block;
+  }
+
+  /* Section heading */
+  .section-heading {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    padding-top: 24px;
+    margin-top: 56px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .section-heading .num {
+    color: var(--accent);
+    font-weight: 700;
+    margin-right: 4px;
+  }
+  .section-subhead {
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--muted);
+    margin-top: -16px;
+    margin-bottom: 24px;
+    font-style: italic;
+  }
+
+  /* TLDR block — large, editorial */
+  .tldr-block {
+    font-family: var(--serif);
+    font-size: 24px;
+    line-height: 1.5;
+    font-weight: 400;
+    padding: 24px 0;
+    border-top: 2px solid var(--fg);
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Core question card */
+  .question-card {
+    border-left: 3px solid var(--accent);
+    padding: 20px 24px;
+    margin-bottom: 32px;
+    background: var(--bg-card);
+    border-radius: 0 8px 8px 0;
+  }
+  .question-num {
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    display: block;
+  }
+  .question-text {
+    font-family: var(--serif);
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-bottom: 16px;
+    color: var(--fg);
+  }
+  .question-approach, .question-answer {
+    font-size: 15px;
+    line-height: 1.7;
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin-top: 12px;
+  }
+  .question-approach {
+    background: var(--border-soft);
+    color: var(--fg-secondary);
+  }
+  .question-answer {
+    background: var(--accent-bg);
+  }
+  .label-pill {
+    font-family: var(--sans);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: block;
+    margin-bottom: 6px;
+  }
+
+  /* Timeline (chapters) — vertical line + dots */
+  .timeline-list { position: relative; padding-left: 28px; }
+  .timeline-list::before {
+    content: ""; position: absolute; left: 6px; top: 6px; bottom: 6px;
+    width: 2px; background: var(--border);
+  }
+  .timeline-item {
+    position: relative;
+    padding-bottom: 20px;
+  }
+  .timeline-item::before {
+    content: ""; position: absolute; left: -28px; top: 6px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--bg);
+    border: 2px solid var(--accent);
+  }
+  .timeline-item:last-child { padding-bottom: 0; }
+  .timeline-time {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: -0.01em;
+  }
+  .timeline-title {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 16px;
+    margin-top: 2px;
+    color: var(--fg);
+  }
+  .timeline-summary {
+    font-size: 14px;
+    color: var(--fg-secondary);
+    margin-top: 4px;
+    line-height: 1.6;
+  }
+
+  /* Premise (basics) — subtle left border, no heavy card */
+  .premise {
+    border-left: 2px solid var(--border);
+    padding: 4px 0 4px 20px;
+    margin-bottom: 24px;
+    transition: border-color 0.2s;
+  }
+  .premise:hover { border-left-color: var(--accent); }
+  .premise-point {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 17px;
+    line-height: 1.4;
+    color: var(--fg);
+    margin-bottom: 8px;
+  }
+  .premise-explanation {
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--fg-secondary);
+  }
+
+  /* Mental model block — Mermaid prominent + caption */
+  .mental-block {
+    margin-bottom: 56px;
+  }
+  .mental-name {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--fg);
+    margin-bottom: 10px;
+  }
+  .mental-description {
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--fg-secondary);
+    margin-bottom: 20px;
+  }
+  .mermaid-frame {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 20px;
+    margin: 16px 0;
+    display: flex;
+    justify-content: center;
+    overflow-x: auto;
+  }
+  .mermaid-frame .mermaid { max-width: 100%; }
+  .mermaid-caption {
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 8px;
+    font-style: italic;
+  }
+  .application-callout {
+    background: var(--accent-bg);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-top: 16px;
+  }
+  .application-callout .label {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+
+  /* Slides gallery — visual captures from video lectures */
+  .slides-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+  }
+  @media (max-width: 720px) { .slides-grid { grid-template-columns: 1fr; } }
+  .slide-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 0;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .slide-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  }
+  .slide-card img {
+    width: 100%;
+    height: auto;
+    display: block;
+    background: #000;
+  }
+  .slide-card figcaption {
+    padding: 12px 16px 14px;
+    font-family: var(--sans);
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--fg-secondary);
+  }
+  .slide-card .slide-time {
+    font-family: var(--mono, ui-monospace, monospace);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+    margin-right: 6px;
+  }
+  .slide-card .slide-type-badge {
+    display: inline-block;
+    font-family: var(--sans);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-right: 6px;
+    color: white;
+    background: var(--muted);
+  }
+  .slide-card .slide-type-badge.title { background: #8a8a8a; }
+  .slide-card .slide-type-badge.content { background: #5a7d9a; }
+  .slide-card .slide-type-badge.code { background: #2d5a3d; }
+  .slide-card .slide-type-badge.equation { background: #6a4c8c; }
+  .slide-card .slide-type-badge.diagram { background: #b87333; }
+  .slide-card .slide-type-badge.demo { background: #a84545; }
+  .slide-card .slide-caption {
+    color: var(--fg);
+    font-weight: 500;
+  }
+  .slide-card .visual-text {
+    margin: 10px 16px 14px;
+    padding: 10px 12px;
+    background: var(--border-soft, #f5f5f5);
+    border-left: 3px solid var(--accent);
+    border-radius: 4px;
+    font-family: var(--mono, ui-monospace, monospace);
+    font-size: 11.5px;
+    line-height: 1.6;
+    color: var(--fg-secondary);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .slide-card .visual-text-label {
+    font-family: var(--sans);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    margin-bottom: 4px;
+    display: block;
+  }
+  /* Visual evidence chain — small slide refs next to report sections */
+  .visual-refs {
+    margin-top: 12px;
+    font-family: var(--sans);
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .visual-refs .label {
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+    margin-right: 6px;
+    color: var(--accent);
+  }
+  .visual-refs a {
+    color: var(--accent);
+    text-decoration: none;
+    margin-right: 6px;
+    border-bottom: 1px dotted var(--accent);
+  }
+  .visual-refs a:hover { border-bottom-style: solid; }
+
+  /* Playbook — connected steps */
+  .playbook-block {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    margin-bottom: 32px;
+  }
+  .playbook-name {
+    font-family: var(--serif);
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.3;
+    margin-bottom: 6px;
+  }
+  .playbook-when {
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+  .step-list {
+    counter-reset: step;
+    position: relative;
+    padding-left: 0;
+  }
+  .step-item {
+    position: relative;
+    padding-left: 48px;
+    padding-bottom: 20px;
+    counter-increment: step;
+  }
+  .step-item:not(:last-child)::after {
+    content: ""; position: absolute; left: 17px; top: 36px; bottom: 0;
+    width: 2px; background: var(--border);
+  }
+  .step-item::before {
+    content: counter(step);
+    position: absolute; left: 0; top: 0;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--accent-bg);
+    color: var(--accent);
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .step-title {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 16px;
+    line-height: 1.4;
+    margin-bottom: 6px;
+  }
+  .step-detail {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--fg-secondary);
+  }
+  .pitfalls-box {
+    margin-top: 20px;
+    padding: 14px 18px;
+    border-radius: 8px;
+    background: color-mix(in srgb, #f87171 12%, transparent);
+    border-left: 3px solid #dc2626;
+  }
+  .pitfalls-box .label {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #dc2626;
+    margin-bottom: 8px;
+  }
+  .pitfalls-box ul {
+    font-size: 14px;
+    line-height: 1.6;
+    padding-left: 18px;
+    color: var(--fg-secondary);
+  }
+  .pitfalls-box li { margin-bottom: 4px; }
+
+  /* Quick start — checklist style */
+  .quickstart-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-soft);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+  .quickstart-item:last-child { border-bottom: none; }
+  .quickstart-item .check {
+    color: var(--accent);
+    font-size: 18px;
+    line-height: 1.4;
+    flex-shrink: 0;
+  }
+
+  /* Pull quote */
+  .pullquote {
+    margin: 32px 0;
+    padding: 8px 0 8px 32px;
+    border-left: 4px solid var(--accent);
+    position: relative;
+  }
+  .pullquote::before {
+    content: """;
+    position: absolute;
+    left: -8px;
+    top: -20px;
+    font-family: Georgia, serif;
+    font-size: 72px;
+    color: var(--accent);
+    opacity: 0.3;
+    line-height: 1;
+  }
+  .pullquote-text {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 22px;
+    line-height: 1.5;
+    color: var(--fg);
+  }
+  .pullquote-attribution {
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 12px;
+  }
+
+  /* References (footer-style) */
+  .references-block { font-size: 14px; }
+  .glossary-row {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    gap: 16px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .glossary-row:last-child { border-bottom: none; }
+  .glossary-term {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+  }
+  .glossary-definition {
+    color: var(--fg-secondary);
+    line-height: 1.6;
+  }
+  .reading-item {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-soft);
+    display: flex;
+    gap: 12px;
+    align-items: baseline;
+  }
+  .reading-item:last-child { border-bottom: none; }
+  .reading-type {
+    font-family: var(--sans);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: var(--accent-bg);
+    padding: 2px 8px;
+    border-radius: 3px;
+    flex-shrink: 0;
+    min-width: 60px;
+    text-align: center;
+  }
+  .reading-name { font-weight: 600; }
+  .reading-note { color: var(--muted); font-size: 13px; margin-top: 2px; }
+
+  /* TOC */
+  .toc-link {
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--muted);
+    transition: color 0.15s;
+    padding: 4px 0;
+    display: block;
+  }
+  .toc-link:hover, .toc-link.active {
+    color: var(--accent);
+  }
+  .toc-link.active { font-weight: 600; }
+
+  /* Print */
+  @media print {
+    .no-print { display: none !important; }
+    body { font-size: 12pt; }
+    .question-card, .playbook-block, .mermaid-frame { break-inside: avoid; }
+  }
+
+  section[id] { scroll-margin-top: 80px; }
+</style>
+<style>
+#mtbar{display:flex;align-items:center;justify-content:space-between;padding:8px 20px;background:var(--bg,#fafaf7);border-bottom:1px solid var(--border,#e7e5e4);font-family:var(--sans,ui-sans-serif,system-ui,sans-serif);font-size:12px;color:var(--muted,#78716c);transition:padding .18s ease,box-shadow .18s ease}
+#mtbar a{display:inline-flex;align-items:center;gap:9px;min-height:38px;padding:0 12px;margin-left:-12px;color:var(--fg,#1c1917);text-decoration:none;border-radius:9px}
+#mtbar a:hover{background:var(--border-soft,#f5f5f4)}
+#mtbar a i{font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:16px}
+#mtprog{position:fixed;top:0;left:0;height:3px;width:0;background:var(--accent,#B45309);z-index:99;pointer-events:none}
+.mt-original-title{margin-top:10px;font-family:var(--sans,ui-sans-serif,system-ui,sans-serif);font-size:15px;line-height:1.55;color:var(--muted,#78716c)}
+nav.no-print.sticky,body>nav.sticky{transition:min-height .18s ease,box-shadow .18s ease}
+html.mt-scrolled #mtbar{padding-top:4px;padding-bottom:4px;box-shadow:0 8px 24px rgba(0,0,0,.05)}
+html.mt-scrolled nav.no-print.sticky,html.mt-scrolled body>nav.sticky{box-shadow:0 8px 24px rgba(0,0,0,.08)}
+html.mt-scrolled nav.no-print.sticky .max-w-6xl,html.mt-scrolled body>nav.sticky .max-w-6xl{padding-top:.35rem!important;padding-bottom:.35rem!important;min-height:40px!important}
+#mttoc{display:none;align-items:center;justify-content:center;min-width:64px;height:44px;border:1px solid var(--border,#e7e5e4);background:var(--bg-card,#fff);color:var(--fg,#1c1917);border-radius:999px;font-size:12px;font-weight:700;font-family:var(--sans,ui-sans-serif,system-ui,sans-serif);cursor:pointer}
+#mttop{position:fixed;right:16px;z-index:98;display:none;align-items:center;justify-content:center;border:1px solid var(--border,#e7e5e4);background:var(--bg-card,#fff);color:var(--fg,#1c1917);box-shadow:0 8px 24px rgba(0,0,0,.16);cursor:pointer}
+#mttop{bottom:80px;width:46px;height:46px;border-radius:999px;font-size:16px}
+@media (max-width:960px){#mttoc{display:flex}}
+#mttop.show{display:flex}
+#mtsheet{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.42)}
+#mtsheet .mtsheet-in{position:absolute;left:0;right:0;bottom:0;max-height:72vh;overflow:auto;background:var(--bg,#fafaf7);border-radius:18px 18px 0 0;padding:14px 18px calc(22px + env(safe-area-inset-bottom));box-shadow:0 -12px 40px rgba(0,0,0,.2)}
+.mtsheet-head{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:14px;padding:4px 2px 10px;color:var(--fg,#1c1917);font-family:var(--sans,ui-sans-serif,system-ui,sans-serif)}
+#mtclose{width:44px;height:44px;margin:-10px -10px -10px 0;border:0;background:none;font-size:15px;cursor:pointer;color:var(--muted,#78716c)}
+#mtlinks a{display:flex;min-height:46px;align-items:center;padding:2px 8px;color:var(--fg-secondary,#44403c);text-decoration:none;font-size:14px;border-bottom:1px solid var(--border-soft,#f5f5f4);font-family:var(--sans,ui-sans-serif,system-ui,sans-serif)}
+#mtlinks a:hover,#mtlinks a:active{background:var(--border-soft,#f5f5f4)}
+@media (max-width:640px){
+ body{padding-bottom:96px}
+ #mtbar{position:sticky;top:0;z-index:97;padding:4px 14px;font-size:11px}
+ #mtbar a{min-height:32px;padding:0 10px}
+ #mtbar a i{font-size:14px}
+ #mttoc{display:flex;height:44px;min-width:64px;padding:0 14px}
+ .hero-title{font-size:30px!important;line-height:1.22!important;letter-spacing:0!important}
+ .mt-original-title{font-size:14px!important;line-height:1.55!important;color:var(--muted,#57534e)!important}
+ .tldr-block{font-size:18px!important;line-height:1.65!important;padding:18px 0!important}
+ .question-card{padding:16px 18px!important;margin-bottom:24px!important}
+ .question-text{font-size:18px!important;line-height:1.45!important;margin-bottom:12px!important}
+ .question-approach,.question-answer{font-size:15px!important;line-height:1.65!important;padding:10px 12px!important}
+ .premise-explanation,.mental-description,.slide-card figcaption{font-size:14px!important;line-height:1.65!important}
+ #mttop{right:18px;bottom:calc(72px + env(safe-area-inset-bottom));width:44px;height:44px}
+ nav.no-print.sticky .max-w-6xl,body>nav.sticky .max-w-6xl{min-height:44px!important;padding-top:.5rem!important;padding-bottom:.5rem!important}
+}
+@media print{#mtbar,#mtprog,#mttoc,#mttop,#mtsheet{display:none!important}}
+</style>
+</head>
+<body>
+<!--mt-chrome-->
+<div id="mtbar"><a href="/taste/">&larr;&nbsp;<i>Valley Beacon 深读</i></a><button id="mttoc" type="button" aria-label="打开目录">目录</button></div>
+<div id="mtprog"></div>
+<button id="mttop" type="button" aria-label="回到顶部">&uarr;</button>
+<div id="mtsheet" hidden><div class="mtsheet-in"><div class="mtsheet-head">目录<button id="mtclose" type="button" aria-label="关闭">&#10005;</button></div><nav id="mtlinks"></nav></div></div>
+
+
+<nav class="no-print sticky top-0 z-40 backdrop-blur" style="background: color-mix(in srgb, var(--bg) 85%, transparent); border-bottom: 1px solid var(--border);">
+  <div class="max-w-6xl mx-auto flex items-center justify-between px-6 py-3 ui">
+    <a href="#top" class="font-semibold accent text-sm">Valley Beacon 深读</a>
+    <div class="flex items-center gap-3 text-sm">
+      <button onclick="document.documentElement.classList.toggle('dark')" class="text-muted hover:opacity-80 px-2 py-1" title="切换深色">🌓</button>
+      <button onclick="window.print()" class="text-muted hover:opacity-80 px-2 py-1" title="打印/PDF">🖨</button>
+    </div>
+  </div>
+</nav>
+
+<div id="top" class="max-w-6xl mx-auto px-6 py-12 grid grid-cols-1 lg:grid-cols-[1fr_200px] gap-12">
+  <main id="root" class="space-y-2 min-w-0"></main>
+  <aside class="no-print hidden lg:block">
+    <div class="sticky top-20">
+      <div class="ui text-xs uppercase tracking-wider text-muted mb-3" style="letter-spacing: 0.08em;">目录</div>
+      <nav id="toc"></nav>
+    </div>
+  </aside>
+</div>
+
+<footer class="no-print max-w-6xl mx-auto px-6 py-12 text-xs text-muted text-center ui" style="border-top: 1px solid var(--border);">
+  Generated by ai-podcast-listener · Claude-style typography · Mermaid diagrams · Print-ready
+</footer>
+
+<script id="report-data" type="application/json">{"meta":{"title":"如何设计 AI Agent 循环：schedule、goal 与 Claude Code/Codex 子代理","source_url":"https://www.lennysnewsletter.com/p/how-to-design-ai-agent-loops-schedules","source_type":"generic","duration":"28m","speakers":["Claire Vo"],"publish_date":"2026-06-17","cover_url":null,"domain":"AI Coding / 效率工具","mode":"familiar","language":"en","transcript_source":"first-party","transcript_confidence":"medium","original_title":"How to design AI agent loops: schedules, goals, and subagents in Claude Code and Codex"},"tldr":"循环只是自动化的 prompt；用「入职员工」思维设计 heartbeat、cron、hook、goal 四类循环，并配齐五要素。","core_questions":[{"question":"什么是「循环」（loop），它和普通 prompt 有什么本质区别？","approach":"Claire Vo 先为这个听起来吓人的新词祛魅，把它拉回到大家熟悉的 prompt 概念上，再点出唯一的差别在于「自动执行」。","answer":"循环本质就是「一个自动执行的 prompt」，并不是什么新范式。它和普通 prompt 的唯一区别在于触发方式——普通 prompt 由人手动发起一次，循环则被某种机制（心跳、定时、事件或目标）自动反复触发。认知门槛因此被大幅降低：核心难点不在调度基础设施，而在 prompt 本身写得好不好。"},{"question":"heartbeat、cron、hook、goal 四种循环类型各自适合什么场景？","approach":"她按「由什么来触发」这条线索逐一拆解四种机制，并为每种说明真正契合的使用场景。","answer":"heartbeat 是固定间隔的心跳检测，适合需要持续盯着某个状态的场景；cron 是定时任务（如每天 10:15 运行），适合有明确时间表的周期性工作；hook 是事件触发（如 PR 合并时启动），适合响应式、被某个动作勾起的工作；goal 是目标驱动，达到某个条件才停止，适合「不在乎跑多久、只在乎达成结果」的任务。其中 goal 类最难写好。"},{"question":"一个能真正上线的有效循环必须具备哪五个要素？","approach":"她把单次 agent 调用升级为可长期运行系统所需的最小工程契约，列成一份五项清单。","answer":"五要素分别是：work trees（工作树，做文件隔离）、skills（技能，即指令集）、plugins/connectors（插件/连接器，对接外部工具）、subagents（子代理，并行执行与验证）、state tracking（状态追踪，留痕与记忆）。五者缺一不可，其中 state tracking 是把无状态 prompt 变成有记忆循环的关键。"},{"question":"如何用「给员工做入职培训」的思维模型来设计循环？","approach":"她把抽象的 agent 编排映射到人人都懂的管理直觉上，让五要素各自对应入职培训中的一项安排。","answer":"把 AI 循环想象成给一名新员工做入职培训：要给它明确的目标和职责（skills）、一个可工作的环境（work trees）、趁手的工具（plugins/connectors）、可以指挥求助的副手（subagents），以及一条记录进度与沟通的渠道（state tracking）。这套类比把工程清单翻译成管理直觉，是贯穿全集的核心心智模型，也大幅降低了非基础设施背景者的上手门槛。"},{"question":"为什么目标型（goal）循环最难写好，大多数人在哪里白烧 tokens？","approach":"她从 goal 循环「没有固定终止条件」这一结构性特征切入，指出问题根源，并给出两个可自检的警示信号。","answer":"goal 循环最难，是因为它没有固定的终止条件，需要循环自己判断「是否达成目标」，一旦判断逻辑不清就容易在达标前无效消耗大量 tokens。两个警示信号预示循环会「先变贵、后才变有用」：(1) 循环没有清晰的成功标准；(2) 缺少 state tracking，导致重复劳动。对冲手段是派生目标型子代理实时验证主循环的输出，把生成与验证分离。"}],"narrative":"Claire Vo 以「prompts are out, loops are in」开场，先把「循环」这个听起来吓人的新词拉回地面——它本质只是一个被自动化的 prompt，并非全新范式。她随后系统拆解触发循环的四种方式：heartbeat（持续心跳）、cron（定时）、hook（事件钩子）、goal（目标驱动），并说明每种真正适合的场景。接着她提出本集的核心心智模型：设计一个循环，就像给新员工做入职培训——你要交代它的工作环境、可用工具、能调用的同事，以及如何记录进度。落到工程层面，这对应每个有效循环必备的五要素：work trees、skills、plugins/connectors、subagents 和 state tracking。理论之后是两场现场实战：其一在 Claude Code 中构建一个每天上午 10:15 自调度的老旧 PR 审查器，它会派生子代理并通知团队；其二在 Codex 中搭建每周运行的技能识别循环，派生目标型子代理实时验证自身输出，观众可以看到子代理实时被拉起。最后她坦言目标型循环最难写好，也最容易白烧 tokens，并给出两个预示循环「先变贵、后变有用」的警示信号，收尾分享听众们正在用循环做的事。","the_one_insight":"设计一个 AI 循环最好的思维模型不是写代码，而是给一名新员工做入职培训——你要明确它的工作环境、可用工具、能求助的同事和如何留痕，五要素齐了循环才真正可靠。","key_moments":[{"timestamp":"00:00","title":"Prompts are out, loops are in","summary":"开宗明义：循环不是可怕的新范式，它只是被自动化的 prompt，先给听众卸下心理负担。"},{"timestamp":"03:03","title":"自动化 prompt 的四种方式","summary":"拆解 heartbeat、cron、hook、goal 四种触发机制，并讲清各自真正适合的场景。"},{"timestamp":"06:03","title":"每个有效循环必备的五要素","summary":"work trees、skills、plugins/connectors、subagents、state tracking——缺一不可的工程清单。"},{"timestamp":"09:26","title":"「入职员工」设计框架","summary":"把设计循环类比成给新员工做 onboarding，是贯穿全集的核心心智模型。"},{"timestamp":"11:58","title":"实战一：Claude Code 中的每日老旧 PR 循环","summary":"现场构建每天 10:15 自调度的 aging-PR 审查器，自调度并派生子代理通知团队。"},{"timestamp":"19:00","title":"实战二：Codex 中的每周技能识别循环","summary":"搭建每周运行的技能识别自动化，派生目标型子代理实时验证自身输出。"},{"timestamp":"25:28","title":"循环的警示信号","summary":"给出两个预示循环会先变贵、后变有用的警告信号，提醒别盲目烧 tokens。"}],"_familiar_mode":{"advanced_insights":["把循环类型从「技术触发器」重新框定为「自动化的 prompt」，降低了认知门槛，也暗示循环设计的核心难点在 prompt 工程而非调度基础设施。","五要素（work trees、skills、plugins/connectors、subagents、state tracking）实际上是把单次 agent 调用升级为可长期运行系统的最小工程契约，其中 state tracking 是把无状态 prompt 变成有记忆循环的关键。","目标型（goal）循环之所以最难，是因为它需要循环自己判断「是否达成目标」，这把验证逻辑也交给了模型，容易陷入无收敛的 token 消耗；用子代理实时验证输出是一种对冲手段。","子代理（subagent）在循环中既是并行执行单元，也是验证单元——实战二里目标型子代理被用来实时校验主循环的产出，体现了「生成与验证分离」的架构思路。"],"critique":{"summary":"本集是高密度的实操演示，但更偏「怎么搭」而非「成本与可靠性的系统治理」。","points":["show notes 只给出五要素清单和两个警示信号，但缺乏量化标准——多贵算贵、循环跑多久该叫停，没有可操作的阈值。","两场实战都在 Claire 自己熟悉的工作流（PR 审查、技能识别）中，对循环在更脏、更对抗性环境下的失败模式着墨不足。","目标型循环被点名为「最容易白烧 tokens」，但除了用子代理验证，没有给出预算上限、超时熔断等更硬的护栏方案。"]},"steelman":{"summary":"若接受「循环 = 自动化 prompt + 入职五要素」这一框架，它确实给了非基础设施背景的从业者一条可落地的起步路径。","points":["「入职员工」类比把抽象的 agent 编排映射到人人都懂的管理直觉，大幅降低了上手门槛。","先定义、再五要素、再两场现场构建的结构，让听众既有心智模型又有可复制的模板。","明确指出目标型循环最难、并给出两个警示信号，是务实的预期管理，避免新手一上来就踩最贵的坑。"]},"action_items":["用「入职新员工」清单审视你想自动化的任务：它的工作环境、工具、可调用的子代理、如何留痕是否都已明确。","为你的第一个循环按五要素逐项落地：配置 work tree、挂载 skills、接入 plugins/connectors、规划 subagents、加上 state tracking。","在 Claude Code 中仿照实战一，搭一个定时（如每日）的老旧 PR 审查循环，让它监控陈旧 PR 并通知团队。","在 Codex 中仿照实战二，搭一个每周技能识别循环，并派生一个目标型子代理实时验证主循环输出。","上线任何目标型循环前，先设定 token 预算与停止条件，并留意两个警示信号，防止「变有用之前先变贵」。"]},"quotes":[{"text":"Prompts are out and loops are in.","speaker":"Claire Vo","context":"开场点题，宣告从单次 prompt 转向自动化循环的范式趋势。"},{"text":"一个循环只是一个自动化的 prompt，并不是什么可怕的新范式。","speaker":"Claire Vo","context":"为「循环」祛魅，降低听众的认知门槛。"},{"text":"设计一个循环，就像在给一名新员工做入职培训。","speaker":"Claire Vo","context":"提出贯穿全集的核心设计心智模型。"}],"topics":["Agent","AI Coding","效率工具","Claude Code","Codex"]}</script>
+
+<script type="module">
+  const data = JSON.parse(document.getElementById('report-data').textContent);
+  const root = document.getElementById('root');
+  const tocEl = document.getElementById('toc');
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const sections = [];
+
+  let sectionCounter = 0;
+  const section = (id, label, inner, opts = {}) => {
+    sectionCounter++;
+    sections.push({ id, label });
+    const subhead = opts.subhead
+      ? `<div class="section-subhead">${esc(opts.subhead)}</div>` : '';
+    return `<section id="${id}">
+      <div class="section-heading">
+        <span class="num">${String(sectionCounter).padStart(2, '0')}</span>
+        <span>${esc(label)}</span>
+      </div>
+      ${subhead}
+      ${inner}
+    </section>`;
+  };
+
+  const formatDuration = (sec) => {
+    if (!sec) return '';
+    sec = Math.round(sec);
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    return h ? `${h}h${m}m` : `${m}m`;
+  };
+
+  // ===== Hero =====
+  const meta = data.meta || {};
+  const modeBadge = meta.mode === 'unfamiliar'
+    ? '<span class="mode-badge">陌生领域 · 系统性学习</span>'
+    : meta.mode === 'familiar'
+    ? '<span class="mode-badge">熟悉领域 · 增量获取</span>'
+    : '';
+
+  const transcriptBadge = meta.transcript_source
+    ? `<span class="ui text-xs text-muted">📜 ${esc(meta.transcript_source)}</span>` : '';
+
+  const metaBits = [
+    meta.duration && `<span class="text-muted ui text-sm">⏱ ${esc(meta.duration)}</span>`,
+    meta.publish_date && `<span class="text-muted ui text-sm">📅 ${esc(meta.publish_date)}</span>`,
+    meta.domain && `<span class="text-muted ui text-sm">🏷 ${esc(meta.domain)}</span>`,
+    meta.language && `<span class="text-muted ui text-sm">🌐 ${esc(meta.language).toUpperCase()}</span>`,
+  ].filter(Boolean).join(' · ');
+
+  const speakers = Array.isArray(meta.speakers) && meta.speakers.length
+    ? `<div class="ui text-sm text-muted mt-3">🎙 ${meta.speakers.map(esc).join(' · ')}</div>` : '';
+
+  const sourceLink = meta.source_url
+    ? `<a href="${esc(meta.source_url)}" target="_blank" class="ui text-sm accent hover:underline">原始链接 →</a>` : '';
+
+  const heroHTML = `
+    <header class="space-y-4 pb-8" style="border-bottom: 1px solid var(--border);">
+      <div class="flex items-center gap-3 flex-wrap">
+        ${modeBadge}
+        ${transcriptBadge}
+      </div>
+      <h1 class="hero-title text-4xl md:text-5xl">${esc(meta.title || 'Podcast Report')}</h1>
+      <div class="flex flex-wrap gap-x-1 gap-y-1 items-center">${metaBits}</div>
+      ${speakers}
+      <div class="pt-2">${sourceLink}</div>
+    </header>`;
+
+  // ===== TLDR =====
+  let tldrHTML = '';
+  if (data.tldr) {
+    tldrHTML = section('tldr', '一句话总结',
+      `<div class="tldr-block">${esc(data.tldr)}</div>`);
+  }
+
+  // ===== Core Questions =====
+  let questionsHTML = '';
+  if (Array.isArray(data.core_questions) && data.core_questions.length) {
+    questionsHTML = section('questions', '核心问题',
+      data.core_questions.map((q, i) => `
+        <div class="question-card">
+          <span class="question-num">问题 ${String(i+1).padStart(2,'0')}</span>
+          <div class="question-text">${esc(q.question)}</div>
+          ${q.approach ? `
+            <div class="question-approach">
+              <span class="label-pill">分析思路</span>
+              ${esc(q.approach)}
+            </div>` : ''}
+          ${q.answer ? `
+            <div class="question-answer">
+              <span class="label-pill">作者答案</span>
+              ${esc(q.answer)}
+            </div>` : ''}
+        </div>`).join(''),
+      { subhead: '不是结论清单，是嘉宾真正在回答的问题。读完每条你应该能复述他的思路。' }
+    );
+  } else if (Array.isArray(data.key_takeaways) && data.key_takeaways.length) {
+    // 向后兼容老 schema
+    questionsHTML = section('takeaways', '核心收获',
+      `<ol class="space-y-3 list-none p-0">
+        ${data.key_takeaways.map((t, i) => `
+          <li class="premise"><div class="premise-point">${i+1}. ${esc(t)}</div></li>`).join('')}
+      </ol>`);
+  }
+
+  // ===== Slides Gallery (for video lectures with extracted frames) =====
+  // v3.6 watch-mode: slide_type badge + visual_text code block + slide-id anchor
+  let slidesHTML = '';
+  if (Array.isArray(data.slides) && data.slides.length) {
+    const slideId = (file) => {
+      // 'slides/slide-0007.jpg' → 'slide-0007'
+      const m = (file || '').match(/([^\/]+?)\.[^.]+$/);
+      return m ? m[1] : '';
+    };
+    slidesHTML = section('slides', '关键画面',
+      `<div class="slides-grid">
+        ${data.slides.map(s => {
+          const sid = slideId(s.file);
+          const typeBadge = s.slide_type
+            ? `<span class="slide-type-badge ${esc(s.slide_type)}">${esc(s.slide_type)}</span>` : '';
+          const visualText = s.visual_text
+            ? `<div class="visual-text"><span class="visual-text-label">屏幕内容（讲者未口述）</span>${esc(s.visual_text)}</div>` : '';
+          const captionText = s.caption || s.note || '';
+          return `<figure class="slide-card" id="${esc(sid)}">
+            <img src="${esc(s.file)}" alt="${esc(captionText)}" loading="lazy">
+            <figcaption>
+              ${s.timestamp_human ? `<span class="slide-time">${esc(s.timestamp_human)}</span>` : ''}
+              ${typeBadge}
+              ${captionText ? `<span class="slide-caption">${esc(captionText)}</span>` : ''}
+            </figcaption>
+            ${visualText}
+          </figure>`;
+        }).join('')}
+      </div>`,
+      { subhead: `共 ${data.slides.length} 张 · scene-change 抽取 · 标 slide_type 后 Claude 多模态阅读 · 含视觉证据 visual_text` }
+    );
+  }
+
+  // Helper: render visual_refs as small slide anchors
+  const renderVisualRefs = (refs) => {
+    if (!Array.isArray(refs) || !refs.length) return '';
+    return `<div class="visual-refs">
+      <span class="label">视觉证据</span>
+      ${refs.map(r => `<a href="#${esc(r)}">${esc(r)}</a>`).join('')}
+    </div>`;
+  };
+
+  // ===== Chapters Timeline =====
+  let chaptersHTML = '';
+  if (Array.isArray(data.chapters) && data.chapters.length) {
+    chaptersHTML = section('chapters', '章节时间线',
+      `<div class="timeline-list">
+        ${data.chapters.map(c => `
+          <div class="timeline-item">
+            <div class="timeline-time mono">${esc(c.start)}</div>
+            <div class="timeline-title">${esc(c.title)}</div>
+            ${c.summary ? `<div class="timeline-summary">${esc(c.summary)}</div>` : ''}
+          </div>`).join('')}
+      </div>`,
+      { subhead: `共 ${data.chapters.length} 段 · 时长约 ${esc(meta.duration || '?')} · 用来快速跳读` }
+    );
+  }
+
+  // ===== Unfamiliar mode =====
+  let unfamiliarHTML = '';
+  const u = data._unfamiliar_mode;
+  if (u && meta.mode === 'unfamiliar') {
+    let bits = '';
+
+    if (Array.isArray(u.basics) && u.basics.length) {
+      bits += section('basics', '基础共识',
+        `<div class="space-y-0">
+          ${u.basics.map(b => `
+            <div class="premise">
+              <div class="premise-point">${esc(b.point)}</div>
+              <div class="premise-explanation">${esc(b.explanation)}</div>
+              ${renderVisualRefs(b.visual_refs)}
+            </div>`).join('')}
+        </div>`,
+        { subhead: '该领域圈内人都默认同意的前提。读完应该没有「这是什么」的问题。' }
+      );
+    }
+
+    const models = u.mental_models || u.frameworks;
+    if (Array.isArray(models) && models.length) {
+      bits += section('mental-models', '心智模型',
+        models.map((m, i) => `
+          <div class="mental-block">
+            <div class="mental-name">${String(i+1).padStart(2,'0')} · ${esc(m.name)}</div>
+            <div class="mental-description">${esc(m.description)}</div>
+            ${m.mermaid ? `
+              <div class="mermaid-frame">
+                <div class="mermaid" data-id="mm-${i}">${esc(m.mermaid)}</div>
+              </div>
+              <div class="mermaid-caption">图：${esc(m.name)}</div>
+            ` : ''}
+            ${m.how_to_apply ? `
+              <div class="application-callout">
+                <div class="label">如何应用</div>
+                <div>${esc(m.how_to_apply)}</div>
+              </div>` : ''}
+            ${renderVisualRefs(m.visual_refs)}
+          </div>`).join(''),
+        { subhead: '单个核心概念的深度解读 · 用图说话 · 强调"换个角度看见问题"。' }
+      );
+    }
+
+    const playbooks = u.playbooks || u.methodologies;
+    if (Array.isArray(playbooks) && playbooks.length) {
+      bits += section('playbooks', '执行手册',
+        playbooks.map(p => `
+          <div class="playbook-block">
+            <div class="playbook-name">${esc(p.name)}</div>
+            ${p.when_to_use ? `<div class="playbook-when">何时用：${esc(p.when_to_use)}</div>` : ''}
+            <ol class="step-list">
+              ${(p.steps||[]).map(s => `
+                <li class="step-item">
+                  <div class="step-title">${esc(s.title)}</div>
+                  <div class="step-detail">${esc(s.detail)}</div>
+                </li>`).join('')}
+            </ol>
+            ${Array.isArray(p.pitfalls) && p.pitfalls.length ? `
+              <div class="pitfalls-box">
+                <div class="label">常见坑</div>
+                <ul>${p.pitfalls.map(pt => `<li>${esc(pt)}</li>`).join('')}</ul>
+              </div>` : ''}
+            ${renderVisualRefs(p.visual_refs)}
+          </div>`).join(''),
+        { subhead: '可上手照做的多步骤流程 · 含适用场景和坑。' }
+      );
+    }
+
+    if (Array.isArray(u.quick_start) && u.quick_start.length) {
+      bits += section('quickstart', '快速应用',
+        `<div>
+          ${u.quick_start.map(q => `
+            <div class="quickstart-item">
+              <span class="check">✓</span>
+              <span>${esc(q)}</span>
+            </div>`).join('')}
+        </div>`,
+        { subhead: '下周可以立刻做的事 · 具体到一个动作。' }
+      );
+    }
+
+    unfamiliarHTML = bits;
+  }
+
+  // ===== Familiar mode =====
+  let familiarHTML = '';
+  const f = data._familiar_mode;
+  if (f && meta.mode === 'familiar') {
+    let bits = '';
+    if (Array.isArray(f.increments) && f.increments.length) {
+      bits += section('increments', '增量信息',
+        f.increments.map(i => `
+          <div class="premise">
+            <div class="premise-point">${esc(i.fact)}</div>
+            <div class="premise-explanation">
+              <span class="label-pill" style="display:inline;">为什么新</span>
+              ${esc(i.why_new)}
+              ${i.source_timestamp ? `<span class="mono text-muted ml-3">⏱ ${esc(i.source_timestamp)}</span>` : ''}
+            </div>
+          </div>`).join(''),
+        { subhead: '该领域的新数据、新案例 · 标注"为什么这是新的"。' }
+      );
+    }
+    if (Array.isArray(f.new_takes) && f.new_takes.length) {
+      bits += section('new-takes', '新观点',
+        f.new_takes.map(t => `
+          <div class="premise">
+            <div class="premise-point">${esc(t.take)}</div>
+            <div class="premise-explanation">
+              <span class="label-pill" style="display:inline;">vs 主流</span>
+              ${esc(t.vs_mainstream)}
+            </div>
+          </div>`).join(''),
+        { subhead: '反共识或不同角度的看法。' }
+      );
+    }
+    if (Array.isArray(f.new_approaches) && f.new_approaches.length) {
+      bits += section('approaches', '新思路',
+        f.new_approaches.map(a => `
+          <div class="premise">
+            <div class="premise-point">${esc(a.approach)}</div>
+            <div class="premise-explanation">适用：${esc(a.applicable_to)}</div>
+          </div>`).join('')
+      );
+    }
+    if (Array.isArray(f.insights) && f.insights.length) {
+      bits += section('insights', '启发',
+        f.insights.map(i => `
+          <div class="premise" style="border-left-color: var(--accent);">
+            <div class="premise-point">💡 ${esc(i.insight)}</div>
+            ${i.implications ? `<div class="premise-explanation">${esc(i.implications)}</div>` : ''}
+          </div>`).join('')
+      );
+    }
+    if (Array.isArray(f.tensions) && f.tensions.length) {
+      bits += section('tensions', '冲突点',
+        f.tensions.map(t => `
+          <div class="playbook-block">
+            <div class="playbook-name">${esc(t.point)}</div>
+            <div class="grid md:grid-cols-2 gap-4 mt-4">
+              <div class="p-4 rounded" style="background: var(--border-soft);">
+                <span class="label-pill">你的认知</span>
+                <div class="text-sm" style="color: var(--fg-secondary);">${esc(t.your_prior)}</div>
+              </div>
+              <div class="p-4 rounded accent-bg">
+                <span class="label-pill">播客观点</span>
+                <div class="text-sm">${esc(t.podcast_view)}</div>
+              </div>
+            </div>
+          </div>`).join('')
+      );
+    }
+    if (Array.isArray(f.open_questions) && f.open_questions.length) {
+      bits += section('open-questions', '待深挖问题',
+        `<div>
+          ${f.open_questions.map(q => `
+            <div class="quickstart-item">
+              <span class="check">?</span>
+              <span>${esc(q)}</span>
+            </div>`).join('')}
+        </div>`
+      );
+    }
+    familiarHTML = bits;
+  }
+
+  // ===== Quotes (top 3) =====
+  let quotesHTML = '';
+  if (Array.isArray(data.quotes) && data.quotes.length) {
+    const topQuotes = data.quotes.slice(0, 3);
+    quotesHTML = section('quotes', '金句',
+      topQuotes.map(q => `
+        <div class="pullquote">
+          <div class="pullquote-text">${esc(q.text)}</div>
+          <div class="pullquote-attribution ui">
+            — ${esc(q.speaker || '匿名')}${q.timestamp ? ` · <span class="mono">${esc(q.timestamp)}</span>` : ''}
+          </div>
+        </div>`).join(''),
+      { subhead: '只选 3 句最有代表性的 · 信噪比第一。' }
+    );
+  }
+
+  // ===== References =====
+  let referencesHTML = '';
+  const refs = data.references || {};
+  const glossary = refs.glossary || (u && u.glossary) || [];
+  const furtherReading = refs.further_reading || (u && u.further_reading) || [];
+  if (glossary.length || furtherReading.length) {
+    let inner = '';
+    if (glossary.length) {
+      inner += `
+        <div class="mb-8 references-block">
+          <div class="ui text-xs uppercase tracking-wider text-muted mb-3" style="letter-spacing: 0.08em;">术语表</div>
+          <div>
+            ${glossary.map(g => `
+              <div class="glossary-row">
+                <div class="glossary-term">${esc(g.term)}</div>
+                <div class="glossary-definition">${esc(g.definition)}
+                  ${renderVisualRefs(g.visual_refs)}
+                </div>
+              </div>`).join('')}
+          </div>
+        </div>`;
+    }
+    if (furtherReading.length) {
+      inner += `
+        <div class="references-block">
+          <div class="ui text-xs uppercase tracking-wider text-muted mb-3" style="letter-spacing: 0.08em;">延伸阅读</div>
+          <div>
+            ${furtherReading.map(r => `
+              <div class="reading-item">
+                <span class="reading-type">${esc(r.type)}</span>
+                <div>
+                  <div class="reading-name">${esc(r.name)}</div>
+                  ${r.note ? `<div class="reading-note">${esc(r.note)}</div>` : ''}
+                </div>
+              </div>`).join('')}
+          </div>
+        </div>`;
+    }
+    referencesHTML = section('references', '参考资料', inner,
+      { subhead: '术语表 + 延伸阅读 · 末尾参考用。' });
+  }
+
+  root.innerHTML = heroHTML + tldrHTML + questionsHTML + slidesHTML + chaptersHTML + unfamiliarHTML + familiarHTML + quotesHTML + referencesHTML;
+
+  tocEl.innerHTML = sections.map((s, i) => `
+    <a href="#${s.id}" class="toc-link">
+      <span class="mono text-muted" style="font-size: 11px;">${String(i+1).padStart(2,'0')}</span>
+      &nbsp;${esc(s.label)}
+    </a>`).join('');
+
+  renderFlowcharts(root);
+
+  const links = Array.from(tocEl.querySelectorAll('a'));
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + e.target.id));
+      }
+    });
+  }, { rootMargin: '-30% 0px -60% 0px' });
+  document.querySelectorAll('section[id]').forEach(s => observer.observe(s));
+
+  // ====== 流程图渲染器:flowchart 源码 → 卡片 + SVG 箭头(替代 mermaid) ======
+  function renderFlowcharts(scope) {
+    (scope || document).querySelectorAll('.mermaid').forEach(function (host) {
+      if (host.dataset.fcDone) return;
+      const src = host.textContent || '';
+      const head = src.trim().split('\n')[0].trim();
+      if (!/^(flowchart|graph)\s+/i.test(head)) return; // 只处理流程图,其它原样留着
+      const g = fcParse(src);
+      if (!g || g.order.length === 0) return;
+      host.dataset.fcDone = '1';
+      fcDraw(host, g);
+    });
+  }
+
+  function fcParse(src) {
+    const lines = src.trim().split('\n');
+    let dir = 'TD';
+    const nodes = {}, order = [], edges = [];
+    function tok(t) {
+      t = t.trim();
+      const m = t.match(/^([A-Za-z0-9_]+)\s*(?:\[([^\]]*)\]|\{([^}]*)\}|\(([^)]*)\))?$/);
+      if (!m) return null;
+      const id = m[1];
+      const label = (m[2] != null ? m[2] : m[3] != null ? m[3] : m[4]);
+      const shape = m[3] != null ? 'decision' : 'rect';
+      if (!nodes[id]) { nodes[id] = { id: id, label: label || id, shape: shape }; order.push(id); }
+      else if (label) { nodes[id].label = label; if (shape === 'decision') nodes[id].shape = 'decision'; }
+      return id;
+    }
+    lines.forEach(function (raw) {
+      const line = raw.trim();
+      if (!line) return;
+      const fm = line.match(/^(?:flowchart|graph)\s+(TD|TB|LR|RL)/i);
+      if (fm) { dir = fm[1].toUpperCase(); return; }
+      const em = line.match(/^(.+?)\s*--+>\s*(?:\|([^|]*)\|\s*)?(.+)$/);
+      if (em) { const a = tok(em[1]); const b = tok(em[3]); if (a && b) edges.push({ a: a, b: b, lbl: (em[2] || '').trim() }); }
+      else { tok(line); }
+    });
+    return { dir: dir === 'TB' ? 'TD' : dir, nodes: nodes, order: order, edges: edges };
+  }
+
+  function fcLayers(g) {
+    const L = {}; g.order.forEach(function (id) { L[id] = 0; });
+    let changed = true, guard = 0;
+    while (changed && guard++ < 300) {
+      changed = false;
+      g.edges.forEach(function (e) { if (L[e.b] < L[e.a] + 1) { L[e.b] = L[e.a] + 1; changed = true; } });
+    }
+    const layers = [];
+    g.order.forEach(function (id) { (layers[L[id]] = layers[L[id]] || []).push(id); });
+    return layers;
+  }
+
+  function fcDraw(host, g) {
+    const lr = (g.dir === 'LR' || g.dir === 'RL');
+    const layers = fcLayers(g);
+    host.textContent = '';
+    host.style.position = 'relative';
+    host.style.width = '100%';
+    const SVGNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(SVGNS, 'svg');
+    svg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;overflow:visible';
+    const mid = 'fcah' + Math.random().toString(36).slice(2);
+    const defs = document.createElementNS(SVGNS, 'defs');
+    defs.innerHTML = '<marker id="' + mid + '" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="context-stroke"/></marker>';
+    svg.appendChild(defs);
+    host.appendChild(svg);
+
+    const flow = document.createElement('div');
+    flow.style.cssText = 'position:relative;z-index:1;display:flex;gap:' + (lr ? '48px' : '32px') + ';' +
+      (lr ? 'flex-direction:row;align-items:center' : 'flex-direction:column;align-items:stretch');
+    const el = {};
+    layers.forEach(function (layer) {
+      const band = document.createElement('div');
+      band.style.cssText = 'display:flex;gap:18px;justify-content:center;flex-wrap:wrap;' + (lr ? 'flex-direction:column' : 'flex-direction:row');
+      (layer || []).forEach(function (id) {
+        const n = g.nodes[id];
+        const dec = n.shape === 'decision';
+        const card = document.createElement('div');
+        card.style.cssText = 'box-sizing:border-box;width:' + (lr ? '160px' : '200px') + ';padding:11px 14px;border-radius:' +
+          (dec ? '13px' : '10px') + ';font-size:13.5px;line-height:1.5;background:' + (dec ? 'var(--accent-bg)' : 'var(--bg-card)') +
+          ';color:var(--fg);border:1px solid ' + (dec ? 'var(--accent)' : 'var(--border)') + ';' +
+          (dec ? '' : 'border-left:3px solid var(--accent);') +
+          'box-shadow:0 1px 2px rgba(0,0,0,.04),0 8px 18px -12px rgba(0,0,0,.22);text-align:' + (dec ? 'center' : 'left') + ';white-space:normal';
+        card.innerHTML = (dec ? '<div style="font:600 10px var(--sans);letter-spacing:.1em;color:var(--accent);opacity:.85;margin-bottom:3px">判断</div>' : '') +
+          fcEsc(n.label).replace(/&lt;br\s*\/?&gt;/gi, '<br>');
+        band.appendChild(card);
+        el[id] = card;
+      });
+      flow.appendChild(band);
+    });
+    host.appendChild(flow);
+
+    function draw() {
+      const hb = host.getBoundingClientRect();
+      if (!hb.width) return;
+      svg.setAttribute('viewBox', '0 0 ' + hb.width + ' ' + hb.height);
+      Array.prototype.forEach.call(svg.querySelectorAll('.fce'), function (n) { n.remove(); });
+      g.edges.forEach(function (e) {
+        const A = el[e.a], B = el[e.b]; if (!A || !B) return;
+        const a = A.getBoundingClientRect(), b = B.getBoundingClientRect();
+        let x1, y1, x2, y2, d;
+        if (lr) { x1 = a.right - hb.left; y1 = a.top + a.height / 2 - hb.top; x2 = b.left - hb.left; y2 = b.top + b.height / 2 - hb.top; const mx = (x1 + x2) / 2; d = 'M' + x1 + ',' + y1 + ' C' + mx + ',' + y1 + ' ' + mx + ',' + y2 + ' ' + (x2 - 2) + ',' + y2; }
+        else { x1 = a.left + a.width / 2 - hb.left; y1 = a.bottom - hb.top; x2 = b.left + b.width / 2 - hb.left; y2 = b.top - hb.top; const my = (y1 + y2) / 2; d = 'M' + x1 + ',' + y1 + ' C' + x1 + ',' + my + ' ' + x2 + ',' + my + ' ' + x2 + ',' + (y2 - 2); }
+        const p = document.createElementNS(SVGNS, 'path');
+        p.setAttribute('class', 'fce'); p.setAttribute('d', d); p.setAttribute('fill', 'none');
+        p.style.stroke = 'var(--muted-soft)'; p.setAttribute('stroke-width', '1.7'); p.setAttribute('marker-end', 'url(#' + mid + ')');
+        svg.appendChild(p);
+        if (e.lbl) {
+          const mx = (x1 + x2) / 2, my = (y1 + y2) / 2, tw = e.lbl.length * 13 + 14;
+          const r = document.createElementNS(SVGNS, 'rect');
+          r.setAttribute('class', 'fce'); r.setAttribute('x', mx - tw / 2); r.setAttribute('y', my - 11); r.setAttribute('width', tw); r.setAttribute('height', 21); r.setAttribute('rx', 10);
+          r.style.fill = 'var(--bg)'; r.style.stroke = 'var(--border)';
+          const t = document.createElementNS(SVGNS, 'text');
+          t.setAttribute('class', 'fce'); t.setAttribute('x', mx); t.setAttribute('y', my + 4); t.setAttribute('text-anchor', 'middle'); t.setAttribute('font-size', '12.5');
+          t.style.fill = 'var(--muted)'; t.setAttribute('font-family', 'var(--sans)'); t.textContent = e.lbl;
+          svg.appendChild(r); svg.appendChild(t);
+        }
+      });
+    }
+    requestAnimationFrame(function () { requestAnimationFrame(draw); });
+    if (window.ResizeObserver) { new ResizeObserver(function () { requestAnimationFrame(draw); }).observe(host); }
+    window.addEventListener('resize', draw);
+  }
+
+  function fcEsc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
+</script>
+
+<script>
+(function(){
+var p=document.getElementById('mtprog'),tb=document.getElementById('mttoc'),
+    tp=document.getElementById('mttop'),sh=document.getElementById('mtsheet'),
+    ln=document.getElementById('mtlinks');
+function onScroll(){
+  var d=document.documentElement,m=d.scrollHeight-window.innerHeight,y=window.scrollY;
+  p.style.width=(m>0?Math.min(100,y/m*100):0)+'%';
+  tp.classList.toggle('show',y>600);
+  document.documentElement.classList.toggle('mt-scrolled',y>80);
+}
+window.addEventListener('scroll',onScroll,{passive:true});onScroll();
+tp.addEventListener('click',function(){window.scrollTo({top:0,behavior:'smooth'})});
+function fill(){
+  ln.innerHTML='';var seen={};
+  var as=document.querySelectorAll('#toc a[href^="#"], nav a[href^="#"]');
+  for(var i=0;i<as.length;i++){
+    var a=as[i],h=a.getAttribute('href');
+    if(!h||h==='#'||h==='#top'||seen[h])continue;
+    if(!document.getElementById(h.slice(1)))continue;
+    seen[h]=1;
+    var b=document.createElement('a');b.href=h;
+    b.textContent=a.textContent.replace(/\s+/g,' ').trim();
+    b.addEventListener('click',function(){sh.hidden=true});
+    ln.appendChild(b);
+  }
+  if(!ln.children.length){
+    var b2=document.createElement('a');b2.href='#top';b2.textContent='回到顶部';
+    b2.addEventListener('click',function(){sh.hidden=true});ln.appendChild(b2);
+  }
+}
+tb.addEventListener('click',function(){fill();sh.hidden=false});
+sh.addEventListener('click',function(e){if(e.target===sh)sh.hidden=true});
+document.getElementById('mtclose').addEventListener('click',function(){sh.hidden=true});
+function polish(){
+  document.querySelectorAll('a').forEach(function(a){
+    if(a.textContent.replace(/\s+/g,' ').trim()===('AI Podcast '+'Listener')){
+      a.textContent='Valley Beacon 深读';
+      a.setAttribute('aria-label','Valley Beacon 深读');
+    }
+  });
+  var raw=document.getElementById('report-data');
+  if(!raw) return;
+  var data;
+  try{data=JSON.parse(raw.textContent)}catch(e){return}
+  var meta=data.meta||{};
+  if(!meta.original_title||meta.original_title===meta.title) return;
+  function insertOriginal(){
+    if(document.querySelector('.mt-original-title')) return;
+    var h=document.querySelector('.hero-title,h1');
+    if(!h) return;
+    var p=document.createElement('p');
+    p.className='mt-original-title';
+    p.textContent=meta.original_title;
+    h.insertAdjacentElement('afterend',p);
+  }
+  insertOriginal();
+  requestAnimationFrame(insertOriginal);
+  setTimeout(insertOriginal,300);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',polish);
+else polish();
+})();
+</script>
+</body>
+</html>

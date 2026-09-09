@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="720" viewBox="0 0 1120 720">
+<rect width="1120" height="720" fill="#fbfbf8"/>
+<rect x="36" y="36" width="1048" height="648" rx="28" fill="#ffffff" stroke="#e8e4dc" stroke-width="2"/>
+<rect x="36" y="36" width="1048" height="12" rx="6" fill="#7a5e1e"/>
+<text x="70" y="82" font-family="Inter, PingFang SC, Arial, sans-serif" font-size="24" font-weight="700" fill="#7a5e1e">SEMIANALYSIS / SUMMARY IMAGE</text>
+<text x="70" y="140" font-family="Noto Serif SC, PingFang SC, serif" font-size="42" font-weight="900" fill="#151515">800VDC 与 CPO: 预期要向后移</text>
+<circle cx="76" cy="199" r="6" fill="#7a5e1e"/>
+<text x="96" y="208" font-family="Inter, PingFang SC, Arial, sans-serif" font-size="28" font-weight="700" fill="#262626">Nvidia native single-ended 800VDC 量产被推到</text>
+<text x="96" y="247" font-family="Inter, PingFang SC, Arial, sans-serif" font-size="28" font-weight="500" fill="#262626">2028+；Rubin 仍会用 50VDC。</text>
+<circle cx="76" cy="295" r="6" fill="#7a5e1e"/>
+<text x="96" y="304" font-family="Inter, PingFang SC, Arial, sans-serif" font-size="28" font-weight="700" fill="#262626">±400VDC 仍按 2H26 推进，主要面向 hyperscaler 自研</text>
+<text x="96" y="343" font-family="Inter, PingFang SC, Arial, sans-serif" font-size="28" font-weight="500" fill="#262626">ASIC 侧部署。</text>
+<circle cx="76" cy="391" r="6" fill="#7a5e1e"/>
+<text x="96" y="400" font-family="Inter, PingFang SC, Arial, sans-serif" font-size="28" font-weight="700" fill="#262626">CPO 2026/2027 出货预期偏激进，系统级整合与 yield</text>
+<text x="96" y="439" font-family="Inter, PingFang SC, Arial, sans-serif" font-size="28" font-weight="500" fill="#262626">economics 是主要瓶颈。</text>
+<text x="70" y="652" font-family="JetBrains Mono, Menlo, monospace" font-size="18" fill="#a7a7a7">my-taste / 180K Research / 2026-06-16</text>
+</svg>

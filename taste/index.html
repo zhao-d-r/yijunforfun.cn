@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Valley Beacon by Yijun</title>
+<meta name="description" content="AI 替我听播客、读订阅;这里只放我亲自盖章推荐的那部分。">
+<style>
+:root{--ink:#141414;--gray:#767676;--gray-l:#767676;--line:#ececec;--hl:#ffe9a8;--sans:-apple-system,BlinkMacSystemFont,'SF Pro Text','PingFang SC','Microsoft YaHei',sans-serif;--serif:'Songti SC','STSong','Noto Serif CJK SC','Source Han Serif SC',Georgia,serif;--display:Georgia,'Times New Roman','Songti SC',serif;--hand:'Kaiti SC','STKaiti','KaiTi','LXGW WenKai TC',serif;--mono:'SFMono-Regular',Menlo,Consolas,'Liberation Mono',monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:#fff;color:var(--ink);-webkit-font-smoothing:antialiased}
+img{display:block}a{color:inherit;text-decoration:none}
+.wrap{max-width:1080px;margin:0 auto}
+.sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.site-head{display:flex;align-items:center;justify-content:space-between;padding:30px 40px;border-bottom:1px solid var(--line)}
+.site-logo{font-family:var(--display);font-style:italic;font-size:26px}
+.site-logo span{font-size:10px;font-style:normal;font-family:var(--sans);font-weight:700;letter-spacing:.32em;color:var(--gray-l);display:block;margin-top:3px}
+.site-nav{display:flex;gap:30px;font-size:13px;font-weight:600;letter-spacing:.08em}
+.site-nav a{color:#767676;min-height:44px;display:inline-flex;align-items:center;padding:12px 8px 6px;margin:-12px -8px -6px;border-bottom:2px solid transparent}
+.site-nav a.on{color:var(--ink);border-bottom:2px solid var(--ink)}
+.site-nav a:hover{color:var(--ink)}
+.pwrap{container-type:inline-size}
+.poster{position:relative;width:100%;aspect-ratio:1/1;border-radius:22px;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:7.5% 7% 8.5%;box-shadow:0 16px 22px -16px rgba(0,0,0,.3),0 36px 70px -32px rgba(0,0,0,.5);transition:transform .25s ease}
+.plink{display:block}
+.plink:hover .poster{transform:translateY(-4px)}
+.poster::before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;opacity:.5;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.32'/%3E%3C/svg%3E")}
+.poster::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;background:radial-gradient(120% 85% at 50% 20%,rgba(255,255,255,.2),transparent 56%),linear-gradient(180deg,transparent 62%,rgba(0,0,0,.15) 100%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07),inset 0 0 70px rgba(0,0,0,.1)}
+.wm{position:relative;z-index:2;text-align:center;line-height:1.08}
+.wm-script{font-family:var(--hand);font-weight:700;font-size:clamp(26px,13.5cqw,60px);line-height:.92;transform:rotate(-4deg)}
+.wm-brush{font-family:var(--hand);font-size:clamp(34px,19cqw,86px)}
+.wm-mono{font-family:var(--mono);font-weight:700;font-size:clamp(13px,6.4cqw,27px);letter-spacing:.08em}
+.wm-serifcn{font-family:var(--serif);font-weight:900;font-size:clamp(16px,8cqw,34px);letter-spacing:.12em}
+.wm-caslon{font-family:var(--display);font-weight:700;font-size:clamp(13px,6.4cqw,27px);letter-spacing:.22em}
+.wm-sans{font-family:var(--sans);font-weight:800;font-size:clamp(16px,8cqw,34px);letter-spacing:0}
+.wm-sub{display:block;font-family:var(--mono);font-weight:500;font-size:clamp(8px,3cqw,12px);letter-spacing:.34em;margin-top:7px;opacity:.8}
+.face-wrap{position:relative;z-index:2;display:flex;align-items:flex-end;justify-content:center;gap:5%}
+.face{width:100%;flex:1 1 0;min-width:0;aspect-ratio:1/1;border-radius:50%;object-fit:cover;background:rgba(0,0,0,.08);box-shadow:0 10px 26px -10px rgba(0,0,0,.45)}
+img.face{background:#fff}
+.face.ph{display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-weight:900}
+.logo-wrap{position:relative;z-index:2}
+.logo-box{width:100%;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 14px 32px -14px rgba(0,0,0,.45)}
+.logo-img{width:100%;height:100%;object-fit:contain;background:transparent}
+.logo-ph{width:100%;height:100%;align-items:center;justify-content:center;font-family:var(--serif);font-weight:900}
+.geo{position:relative;z-index:2;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 8px 18px rgba(0,0,0,.3))}
+.geo svg{width:100%;height:auto}
+.wave{position:absolute;bottom:12%;left:9%;right:9%;display:flex;align-items:flex-end;gap:3.5%;height:10%;opacity:.6;z-index:1}
+.wave i{flex:1;background:currentColor;border-radius:99px}
+.label{position:relative;z-index:3;background:#fff;color:#101010;font-weight:800;font-size:clamp(13px,6.4cqw,19px);letter-spacing:.01em;padding:9px 20px;transform:rotate(-2.5deg);box-shadow:0 5px 16px rgba(0,0,0,.32);clip-path:polygon(1% 18%,4% 2%,13% 9%,24% 0%,36% 8%,49% 1%,62% 9%,75% 2%,88% 10%,97% 3%,100% 22%,98% 45%,100% 68%,96% 92%,85% 99%,71% 92%,55% 100%,40% 93%,26% 100%,12% 94%,3% 99%,0 75%,2% 48%)}
+.compact-title{display:none}
+/* 小尺寸海报(列表小卡/窄屏):clamp 下限在 <170px 容器里会溢出裁切,改用纯 cqw 缩放 */
+@container (max-width:170px){
+ .wm-mono{font-size:6.4cqw}
+ .wm-caslon{font-size:6.4cqw}
+ .wm-sans{font-size:8cqw}
+ .wm-serifcn{font-size:8cqw}
+ .wm-script{font-size:13.5cqw}
+ .wm-brush{font-size:19cqw}
+ .poster-geo .wm,.poster-logo .wm,.poster-monogram .wm{display:none}
+ .poster-geo,.poster-logo,.poster-monogram{justify-content:center;padding:10% 8% 25%}
+ .poster-logo .logo-wrap,.poster-geo .geo,.poster-monogram .face-wrap{width:48%!important;transform:translateY(-8%)}
+ .poster-logo .logo-box{border-width:2px!important}
+ .poster-logo .compact-title,.poster-geo .compact-title,.poster-monogram .compact-title{display:block;position:absolute;left:8%;right:8%;bottom:8%;z-index:3;text-align:center;font-family:var(--mono);font-size:10cqw;font-weight:900;line-height:1.02;letter-spacing:0;text-wrap:balance}
+ .wm-sub{display:none}
+ .label{display:none}
+ .face{border-width:2px!important}
+}
+@container (max-width:120px){.wm-sub{display:none}.poster-logo .compact-title,.poster-geo .compact-title,.poster-monogram .compact-title{font-size:9.4cqw;letter-spacing:0}}
+.poster.coverart{justify-content:flex-end}
+.cover-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+.cover-shade{position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(0,0,0,0) 52%,rgba(0,0,0,.44) 100%)}
+.mini{border-radius:14px;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;flex:none;box-shadow:0 6px 14px -6px rgba(0,0,0,.3)}
+.mini img{width:100%;height:100%;object-fit:cover}
+/* 时间线 */
+.tl{padding:64px 40px 80px;display:flex;flex-direction:column;gap:84px}
+.tl-day{display:grid;grid-template-columns:128px 1fr;gap:40px}
+.tl-date{position:sticky;top:20px;align-self:start}
+.tl-date .d{font-family:var(--display);font-size:44px;line-height:1;letter-spacing:0}
+.tl-date .w{font-size:11px;font-weight:700;letter-spacing:.26em;color:var(--gray-l);margin-top:8px}
+.tl-date .rule{width:34px;height:3px;background:var(--ink);margin-top:14px}
+.feature{display:grid;grid-template-columns:220px 1fr;gap:36px;align-items:start}
+.feature[data-card-href],.vcard[data-card-href]{cursor:pointer}
+.feature[data-card-href]:hover .feature-title a,.vcard[data-card-href]:hover .vtitle a{text-decoration:underline;text-underline-offset:6px;text-decoration-thickness:2px}
+.vcard[data-card-href]:hover,.vcard[data-card-href]:focus-within{background:#fafafa;box-shadow:0 18px 42px -34px rgba(0,0,0,.55)}
+.vcard[data-card-href]::after{content:"深读";position:absolute;top:14px;right:14px;min-height:28px;display:inline-flex;align-items:center;padding:0 10px;border:1px solid #ddd;border-radius:999px;background:#fff;color:#595959;font-size:11px;font-weight:700;letter-spacing:.08em;opacity:0;transform:translateY(-2px);transition:opacity .18s ease,transform .18s ease;pointer-events:none}
+.vcard[data-card-href]:hover::after,.vcard[data-card-href]:focus-within::after{opacity:1;transform:none}
+.src-line{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.chip{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.14em;padding:4px 9px;border:1px solid #ddd;border-radius:999px;color:#777}
+.chip.solid{background:var(--ink);color:#fff;border-color:var(--ink)}
+.src-name{font-size:12.5px;font-weight:700;letter-spacing:.05em}
+.feature-title{font-family:var(--serif);font-size:23px;font-weight:900;line-height:1.55;margin-bottom:16px}
+.feature-title a:hover,.vtitle a:hover{text-decoration:underline;text-underline-offset:6px;text-decoration-thickness:2px}
+.note{position:relative;margin:0 0 18px;padding:2px 0 2px 20px;border-left:3px solid var(--ink)}
+.note .who{font-size:10px;font-weight:700;letter-spacing:.3em;color:var(--gray);text-transform:uppercase;margin-bottom:8px}
+.note p{font-family:var(--hand);font-size:17.5px;line-height:2;color:#222}
+.hl{background:linear-gradient(transparent 64%,var(--hl) 64%)}
+.tldr{font-size:13px;line-height:1.95;color:#595959;margin-bottom:18px;max-width:560px}
+.tldr b{color:#414141;font-weight:600}
+.feature-foot{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.read{font-size:13px;font-weight:700;border-bottom:2px solid var(--ink);padding:10px 6px 2px;margin:-10px -6px 0}
+.orig{font-size:12px;color:#595959;min-height:44px;display:inline-flex;align-items:center;padding:0 8px;margin:-10px -8px}
+.orig:hover{color:var(--ink)}
+.topics-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.topic-pill{font-size:11px;color:#595959;background:#f3f3f3;border-radius:999px;padding:4px 11px;min-height:44px;display:inline-flex;align-items:center;cursor:pointer;text-decoration:none}
+.topic-pill:hover,.topic-pill:focus-visible{color:var(--ink);text-decoration:underline;text-underline-offset:4px}
+/* 同日多条:平级紧凑卡(信息优先,海报为识别徽章) */
+.vgrid{display:flex;flex-direction:column;gap:28px}
+.vcard{position:relative;display:grid;grid-template-columns:150px 1fr;gap:24px;align-items:start;min-width:0;padding:14px;margin:-14px;border-radius:18px;transition:background .18s ease,box-shadow .18s ease,transform .18s ease}
+.vbody{min-width:0}
+.vcard>.plink{grid-row:1/4}
+.vcard>.vbody{grid-column:2;grid-row:1}
+.vcard>.tldr{grid-column:2;grid-row:2}
+.vcard>.feature-foot{grid-column:2;grid-row:3}
+.vtitle{font-family:var(--serif);font-size:17.5px;font-weight:900;line-height:1.6;margin-bottom:10px}
+.vgrid .note p{font-size:15px}
+.vgrid .tldr{font-size:12.5px;line-height:1.85}
+/* 空状态 */
+.empty-wrap{padding:80px 40px 60px;text-align:center}
+.empty-kicker{font-size:11px;font-weight:700;letter-spacing:.3em;color:#c0c0c0}
+.empty-title{font-family:var(--serif);font-size:30px;font-weight:900;margin:14px 0 10px}
+.empty-sub{font-size:14px;color:#595959;line-height:2;max-width:460px;margin:0 auto}
+.lineup{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:26px;padding:30px 40px 90px}
+.lineup .cap{font-size:12px;font-weight:600;color:#777;text-align:center;margin-top:10px}
+/* topics / collections */
+.page-head{padding:54px 40px 8px}
+.page-title{font-family:var(--display);font-style:italic;font-size:34px}
+.page-sub{font-size:13px;color:#595959;margin-top:8px}
+.tchips{display:flex;flex-wrap:wrap;gap:10px;padding:22px 40px 36px;border-bottom:1px solid var(--line)}
+.tchip{font-size:13px;font-weight:600;min-height:44px;padding:10px 18px;border-radius:999px;border:1px solid #ddd;color:#595959;cursor:pointer;background:#fff}
+.tchip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.tlist{padding:40px 40px 64px;display:grid;grid-template-columns:1fr 1fr;gap:26px}
+.tcard{display:flex;gap:18px;border:1px solid var(--line);border-radius:20px;padding:18px;align-items:flex-start;transition:box-shadow .2s}
+.tcard:hover{box-shadow:0 14px 34px -20px rgba(0,0,0,.25)}
+.tposter{width:92px;flex:none}
+.tposter .poster{border-radius:16px;box-shadow:0 8px 16px -12px rgba(0,0,0,.35),0 18px 34px -28px rgba(0,0,0,.45)}
+.tcard h4{font-family:var(--serif);font-size:15.5px;font-weight:700;line-height:1.6}
+.t-note{font-family:var(--hand);font-size:13px;color:#595959;margin-top:7px;line-height:1.8;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.t-meta{font-size:11px;color:#767676;margin-top:8px;font-family:var(--mono)}
+.col-block{padding:34px 40px 6px}
+.col-block h3{font-family:var(--serif);font-size:20px;font-weight:900}
+.col-block .desc{font-size:12.5px;color:#595959;margin-top:5px}
+footer{margin:30px 0 60px;text-align:center;color:#c5c5c5;font-size:12px;letter-spacing:.1em}
+footer .fleuron{font-family:var(--display);font-size:18px;margin-bottom:8px}
+.hide{display:none!important}
+@media (max-width:860px){
+ .site-head{padding:18px 20px;align-items:flex-start;flex-direction:column;gap:12px}
+ .site-logo{font-size:26px;line-height:1.05}
+ .site-nav{width:100%;gap:18px;font-size:12px;overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch}
+ .site-nav::-webkit-scrollbar{display:none}
+ .site-nav a{flex:0 0 auto}
+ .tl{padding:40px 20px 56px;gap:60px}
+ .tl-day{grid-template-columns:1fr;gap:18px}
+ .tl-date{position:static;display:flex;align-items:baseline;gap:14px}.tl-date .rule{display:none}
+ .feature{grid-template-columns:96px minmax(0,1fr);gap:14px}
+ .feature .pwrap{max-width:96px}
+ .feature-title{font-size:16.5px;line-height:1.55;margin-bottom:10px}
+ .feature .note{margin-bottom:10px;padding-left:14px}
+ .feature .note .who{font-size:9px;margin-bottom:4px}
+ .feature .note p{font-size:14px;line-height:1.75;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+ .feature .tldr{font-size:12.5px;line-height:1.75;margin-bottom:10px}
+ .feature-foot{gap:10px}
+ .vcard{grid-template-columns:104px minmax(0,1fr);column-gap:14px;row-gap:10px;background:#fafafa;border:1px solid #eee}
+ .vcard[data-card-href]::after{top:10px;right:auto;left:10px;min-height:26px;font-size:10px;opacity:1;transform:none}
+ .vcard>.plink{grid-row:1}
+ .vcard>.vbody{grid-column:2;grid-row:1}
+ .vcard>.tldr{grid-column:1/-1;grid-row:2;margin-top:2px;margin-bottom:8px}
+ .vcard>.feature-foot{grid-column:1/-1;grid-row:3}
+ .vtitle{font-size:16px}
+ .tposter{width:74px}
+ .tlist{grid-template-columns:1fr;padding:28px 20px 48px}
+ .page-head,.tchips,.col-block{padding-left:20px;padding-right:20px}
+ .page-head{padding-top:34px}
+ .tchips{overflow-x:auto;flex-wrap:nowrap;gap:8px;padding-top:12px;padding-bottom:16px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
+ .tchips::-webkit-scrollbar{display:none}
+ .tchip{flex:0 0 auto;padding:9px 14px;scroll-snap-align:start}
+ .empty-wrap{padding:56px 20px 40px}.lineup{padding:20px 20px 70px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="site-head">
+  <a class="site-logo" href="/taste/">Valley Beacon<span>BY YIJUN</span></a>
+  <nav class="site-nav"><a class="on" href="/taste/">Timeline</a><a class="" href="/taste/topics">Topics</a><a class="" href="/taste/channels">Channels</a><a class="" href="/taste/collections">Collections</a></nav>
+</header>
+<h1 class="sr-only">Valley Beacon by Yijun</h1><main class="tl"><div class="tl-day">
+  <div class="tl-date"><div class="d">06.30</div><div class="w">TUE 周二</div><div class="rule"></div></div>
+  <div><div class="vgrid"><div class="vcard" data-card-href="/taste/files/claude_blog__getting-started-with-loops">
+  <a class="plink" href="/taste/files/claude_blog__getting-started-with-loops" aria-label="Getting started with loops：四类 loop 逐级交权"><div class="pwrap" aria-hidden="true"><div class="poster poster-geo" style="background:linear-gradient(165deg,#faf4ea 0%,#f0e4d2 70%,#e7d3ba 100%)"><div class="wm wm-caslon" style="color:#191510" aria-hidden="true">CLAUDE<span class="wm-sub" style="color:#191510">BLOG</span></div><div class="geo" style="width:58%"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="#cc785c" stroke-width="3" opacity=".55"/><g fill="#cc785c"><rect x="55" y="26" width="10" height="68" rx="5" transform="rotate(0 60 60)"/><rect x="55" y="26" width="10" height="68" rx="5" transform="rotate(60 60 60)"/><rect x="55" y="26" width="10" height="68" rx="5" transform="rotate(120 60 60)"/></g></svg></div><div class="label">Claude Blog</div><div class="compact-title" style="color:#191510">CLAUDE BLOG</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">ARTICLE</span><span class="src-name">Claude Blog</span></div>
+    <h3 class="vtitle"><a href="/taste/files/claude_blog__getting-started-with-loops">Getting started with loops：四类 loop 逐级交权</a></h3>
+    
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> Claude Code 官方把 loop 定义为「agent 重复做功至停止条件」，分 turn-based / goal-based / time-based / proactive 四层——本质是把「检查→停止条件→触发→整段 prompt」逐级交给 agent。</div>
+  <div class="feature-foot"><a class="orig" href="https://claude.com/blog/getting-started-with-loops" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#claude%20code%20%E5%88%86%E6%9E%90">claude code 分析</a><a class="topic-pill" href="/taste/topics#Agent">Agent</a><a class="topic-pill" href="/taste/topics#AI%20Coding">AI Coding</a></div></div>
+</div></div></div>
+</div><div class="tl-day">
+  <div class="tl-date"><div class="d">06.24</div><div class="w">WED 周三</div><div class="rule"></div></div>
+  <div><div class="vgrid"><div class="vcard" data-card-href="/taste/files/claude_blog__the-agent-identity-and-access-model">
+  <a class="plink" href="/taste/files/claude_blog__the-agent-identity-and-access-model" aria-label="给 Agent 自己的身份：Claude Tag 的访问模型"><div class="pwrap" aria-hidden="true"><div class="poster poster-geo" style="background:linear-gradient(165deg,#faf4ea 0%,#f0e4d2 70%,#e7d3ba 100%)"><div class="wm wm-caslon" style="color:#191510" aria-hidden="true">CLAUDE<span class="wm-sub" style="color:#191510">BLOG</span></div><div class="geo" style="width:58%"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="#cc785c" stroke-width="3" opacity=".55"/><g fill="#cc785c"><rect x="55" y="26" width="10" height="68" rx="5" transform="rotate(0 60 60)"/><rect x="55" y="26" width="10" height="68" rx="5" transform="rotate(60 60 60)"/><rect x="55" y="26" width="10" height="68" rx="5" transform="rotate(120 60 60)"/></g></svg></div><div class="label">Claude Blog</div><div class="compact-title" style="color:#191510">CLAUDE BLOG</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">ARTICLE</span><span class="src-name">Claude Blog</span></div>
+    <h3 class="vtitle"><a href="/taste/files/claude_blog__the-agent-identity-and-access-model">给 Agent 自己的身份：Claude Tag 的访问模型</a></h3>
+    
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> 当 Agent 变得长时运行且置身多人共享频道，「代用户身份」失效；Anthropic 主张给 Agent 自己的 identity——按频道隔离的凭据、权限与审计，用「这个 Agent 在这个隔间能做什么」替代 per-user ACL。</div>
+  <div class="feature-foot"><a class="orig" href="https://claude.com/blog/agent-identity-access-model" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#claude%20code%20%E5%88%86%E6%9E%90">claude code 分析</a><a class="topic-pill" href="/taste/topics#Agent">Agent</a><a class="topic-pill" href="/taste/topics#%E5%AF%B9%E9%BD%90%E5%AE%89%E5%85%A8">对齐安全</a></div></div>
+</div></div></div>
+</div><div class="tl-day">
+  <div class="tl-date"><div class="d">06.21</div><div class="w">SUN 周日</div><div class="rule"></div></div>
+  <div><div class="vgrid"><div class="vcard" data-card-href="/taste/files/lennys__how-to-design-ai-agent-loops-schedules-goals-and-subagents-i">
+  <a class="plink" href="/taste/files/lennys__how-to-design-ai-agent-loops-schedules-goals-and-subagents-i" aria-label="如何设计 AI Agent 循环：schedule、goal 与 Claude Code/Codex 子代理"><div class="pwrap" aria-hidden="true"><div class="poster poster-face" style="background:radial-gradient(circle at 50% 36%,#f6cf9e 0%,#e0a468 45%,#bb6e34 100%)"><div class="wm wm-script" style="color:#171008" aria-hidden="true">Lenny&#x27;s<br>Newsletter</div><div class="face-wrap" style="width:56%"><img class="face" alt="" loading="lazy" src="/taste/assets/source-lennys.png" style="border:3px solid rgba(30,18,8,.3)" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="face ph" style="display:none;background:rgba(40,22,6,.25);border:3px solid rgba(30,18,8,.3);color:rgba(255,255,255,.92);font-size:12cqw">L</div></div><div class="label">Lenny Rachitsky</div><div class="compact-title" style="color:#171008">LENNY&#x27;S NEWSLETTER</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">PODCAST</span><span class="src-name">Lenny&#x27;s Newsletter</span></div>
+    <h3 class="vtitle"><a href="/taste/files/lennys__how-to-design-ai-agent-loops-schedules-goals-and-subagents-i">如何设计 AI Agent 循环：schedule、goal 与 Claude Code/Codex 子代理</a></h3>
+    <div class="note"><div class="who">Yijun 的推荐</div><p>最近感兴趣的话题</p></div>
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> 循环只是自动化的 prompt；用「入职员工」思维设计 heartbeat、cron、hook、goal 四类循环，并配齐五要素。</div>
+  <div class="feature-foot"><a class="orig" href="https://www.lennysnewsletter.com/p/how-to-design-ai-agent-loops-schedules" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#Agent">Agent</a><a class="topic-pill" href="/taste/topics#AI%20Coding">AI Coding</a><a class="topic-pill" href="/taste/topics#%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7">效率工具</a></div></div>
+</div></div></div>
+</div><div class="tl-day">
+  <div class="tl-date"><div class="d">06.16</div><div class="w">TUE 周二</div><div class="rule"></div></div>
+  <div><div class="vgrid"><div class="vcard" data-card-href="/taste/files/lennys__how-braintrust-uses-ai-agents-evals-and-ci-to-ship-better-so">
+  <a class="plink" href="/taste/files/lennys__how-braintrust-uses-ai-agents-evals-and-ci-to-ship-better-so" aria-label="Braintrust 如何用 AI Agent、评测与 CI 提升软件交付质量——对话 Ankur Goyal"><div class="pwrap" aria-hidden="true"><div class="poster poster-face" style="background:radial-gradient(circle at 50% 36%,#f6cf9e 0%,#e0a468 45%,#bb6e34 100%)"><div class="wm wm-script" style="color:#171008" aria-hidden="true">Lenny&#x27;s<br>Newsletter</div><div class="face-wrap" style="width:56%"><img class="face" alt="" loading="lazy" src="/taste/assets/source-lennys.png" style="border:3px solid rgba(30,18,8,.3)" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="face ph" style="display:none;background:rgba(40,22,6,.25);border:3px solid rgba(30,18,8,.3);color:rgba(255,255,255,.92);font-size:12cqw">L</div></div><div class="label">Lenny Rachitsky</div><div class="compact-title" style="color:#171008">LENNY&#x27;S NEWSLETTER</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">PODCAST</span><span class="src-name">Lenny&#x27;s Newsletter</span></div>
+    <h3 class="vtitle"><a href="/taste/files/lennys__how-braintrust-uses-ai-agents-evals-and-ci-to-ship-better-so">Braintrust 如何用 AI Agent、评测与 CI 提升软件交付质量——对话 Ankur Goyal</a></h3>
+    <div class="note"><div class="who">Yijun 的推荐</div><p>评测平台的ceo来分享如何在AI时代构建软件，有很多新的发现和反共识</p></div>
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> Braintrust 创始人 Ankur Goyal 讲如何用编码 agent 跑周级基准实验、用「agent line」框架决定哪些工作可委派、把 eval 当成现代版 PRD 来编码「什么是好」，并指出修好 CI 是提速工程的最高杠杆。</div>
+  <div class="feature-foot"><a class="orig" href="https://www.lennysnewsletter.com/p/how-braintrust-uses-ai-agents-evals" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#Agent">Agent</a><a class="topic-pill" href="/taste/topics#AI%20Coding">AI Coding</a><a class="topic-pill" href="/taste/topics#%E8%AF%84%E6%B5%8B">评测</a></div></div>
+</div></div></div>
+</div><div class="tl-day">
+  <div class="tl-date"><div class="d">06.15</div><div class="w">MON 周一</div><div class="rule"></div></div>
+  <div><div class="vgrid"><div class="vcard" data-card-href="/taste/files/xiaoyu_shifenxiyin__vol-71-当ai成为新基础设施-财富将如何重新分配-串台-听懂涨声">
+  <a class="plink" href="/taste/files/xiaoyu_shifenxiyin__vol-71-当ai成为新基础设施-财富将如何重新分配-串台-听懂涨声" aria-label="当 AI 成为新基础设施，财富将如何重新分配？"><div class="pwrap" aria-hidden="true"><div class="poster coverart" style="background:linear-gradient(160deg,#1b2a4a 0%,#27406e 55%,#b88a3c 130%)"><img class="cover-img" alt="" loading="lazy" src="https://image.xyzcdn.net/FiD7tnQ-I0LXpArN8EMTHl91kNOB.jpg" onerror="this.style.display='none'"><div class="cover-shade"></div><div class="label">敏姐 &amp; 石磊</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">PODCAST</span><span class="src-name">小宇宙·十分吸引</span></div>
+    <h3 class="vtitle"><a href="/taste/files/xiaoyu_shifenxiyin__vol-71-当ai成为新基础设施-财富将如何重新分配-串台-听懂涨声">当 AI 成为新基础设施，财富将如何重新分配？</a></h3>
+    <div class="note"><div class="who">Yijun 的推荐</div><p>客观梳理了AI时代投资逻辑</p></div>
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> 用铁路、电力、互联网三次基础设施革命的财富洗牌规律，解读AI这一轮谁会赢、风险在哪，以及普通人在认知、资产、身体三个层面如何应对。</div>
+  <div class="feature-foot"><a class="orig" href="https://www.xiaoyuzhoufm.com/episode/6a2e69284233e62bc5499160" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#%E8%A1%8C%E4%B8%9A%E5%8A%A8%E6%80%81">行业动态</a><a class="topic-pill" href="/taste/topics#%E5%9F%BA%E7%A1%80%E8%AE%BE%E6%96%BD">基础设施</a><a class="topic-pill" href="/taste/topics#%E6%96%B9%E6%B3%95%E8%AE%BA">方法论</a></div></div>
+</div></div></div>
+</div><div class="tl-day">
+  <div class="tl-date"><div class="d">06.11</div><div class="w">THU 周四</div><div class="rule"></div></div>
+  <div><div class="vgrid"><div class="vcard" data-card-href="/taste/files/latent_space__why-video-agent-models-are-next-ethan-he-xai-grok-imagine">
+  <a class="plink" href="/taste/files/latent_space__why-video-agent-models-are-next-ethan-he-xai-grok-imagine" aria-label="为什么下一步是「视频 Agent」——对话 xAI Grok Imagine 的 Ethan He"><div class="pwrap" aria-hidden="true"><div class="poster poster-logo" style="background:linear-gradient(155deg,#06141f 0%,#123d52 58%,#19a6a3 115%)"><div class="wm wm-mono" style="color:#bffbf2" aria-hidden="true">LATENT<br>SPACE</div><div class="logo-wrap" style="width:52%"><div class="logo-box" style="border:3px solid rgba(191,251,242,.55);border-radius:22%;background:rgba(191,251,242,.16)"><img class="logo-img" alt="" loading="lazy" src="/taste/assets/source-latent-space.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="logo-ph" style="display:none;color:rgba(255,255,255,.92);font-size:16cqw">LS</div></div></div><div class="label">swyx &amp; Alessio</div><div class="compact-title" style="color:#bffbf2">LATENT SPACE</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">PODCAST</span><span class="src-name">Latent Space</span></div>
+    <h3 class="vtitle"><a href="/taste/files/latent_space__why-video-agent-models-are-next-ethan-he-xai-grok-imagine">为什么下一步是「视频 Agent」——对话 xAI Grok Imagine 的 Ethan He</a></h3>
+    
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> xAI 的 Ethan He 拆解视频生成模型如何炼成，并抛出核心判断：视频模型的智能主要来自语言模型，下一个 Sora 不会是更强的视频模型，而是会规划、生成、编辑、迭代的「视频 Agent」。</div>
+  <div class="feature-foot"><a class="orig" href="https://www.latent.space/p/video-agents" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#%E8%A7%86%E9%A2%91%E7%94%9F%E6%88%90">视频生成</a><a class="topic-pill" href="/taste/topics#Agent">Agent</a></div></div>
+</div><div class="vcard" data-card-href="/taste/files/latent_space__ainews-open-models-model-labs-vs-agent-labs-and-what-s-untra">
+  <a class="plink" href="/taste/files/latent_space__ainews-open-models-model-labs-vs-agent-labs-and-what-s-untra" aria-label="[AINews] 开放模型、Model Labs vs Agent Labs、什么是「不可训练的」——Sarah Guo"><div class="pwrap" aria-hidden="true"><div class="poster poster-logo" style="background:linear-gradient(155deg,#06141f 0%,#123d52 58%,#19a6a3 115%)"><div class="wm wm-mono" style="color:#bffbf2" aria-hidden="true">LATENT<br>SPACE</div><div class="logo-wrap" style="width:52%"><div class="logo-box" style="border:3px solid rgba(191,251,242,.55);border-radius:22%;background:rgba(191,251,242,.16)"><img class="logo-img" alt="" loading="lazy" src="/taste/assets/source-latent-space.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="logo-ph" style="display:none;color:rgba(255,255,255,.92);font-size:16cqw">LS</div></div></div><div class="label">swyx &amp; Alessio</div><div class="compact-title" style="color:#bffbf2">LATENT SPACE</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">ARTICLE</span><span class="src-name">Latent Space</span></div>
+    <h3 class="vtitle"><a href="/taste/files/latent_space__ainews-open-models-model-labs-vs-agent-labs-and-what-s-untra">[AINews] 开放模型、Model Labs vs Agent Labs、什么是「不可训练的」——Sarah Guo</a></h3>
+    
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> Sarah Guo 框架串起本期：能被打分的终将被模型实验室吞掉，应用护城河在不可训练角落；Fable 5 信任风波与 DiffusionGemma 开源恰是两侧注脚</div>
+  <div class="feature-foot"><a class="orig" href="https://www.latent.space/p/ainews-open-models-model-labs-vs" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#%E8%A1%8C%E4%B8%9A%E5%8A%A8%E6%80%81">行业动态</a><a class="topic-pill" href="/taste/topics#%E6%A8%A1%E5%9E%8B%E5%8F%91%E5%B8%83">模型发布</a><a class="topic-pill" href="/taste/topics#%E4%BA%A7%E5%93%81">产品</a></div></div>
+</div><div class="vcard" data-card-href="/taste/files/anthropic_eng__how-we-contain-claude-across-products">
+  <a class="plink" href="/taste/files/anthropic_eng__how-we-contain-claude-across-products" aria-label="我们如何在各产品线中隔离与约束 Claude"><div class="pwrap" aria-hidden="true"><div class="poster poster-geo" style="background:linear-gradient(165deg,#f6efe4 0%,#ecdfc9 70%,#dfc9a8 100%)"><div class="wm wm-caslon" style="color:#1c150e" aria-hidden="true">ANTHROPIC<span class="wm-sub" style="color:#1c150e">ENGINEERING</span></div><div class="geo" style="width:58%"><svg viewBox="0 0 120 120"><g fill="#a84d2f" opacity=".95"><rect x="55" y="16" width="10" height="88" rx="5" transform="rotate(0 60 60)"/><rect x="55" y="16" width="10" height="88" rx="5" transform="rotate(45 60 60)"/><rect x="55" y="16" width="10" height="88" rx="5" transform="rotate(90 60 60)"/><rect x="55" y="16" width="10" height="88" rx="5" transform="rotate(135 60 60)"/></g></svg></div><div class="label">Engineering</div><div class="compact-title" style="color:#1c150e">ANTHROPIC ENGINEERING</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">ARTICLE</span><span class="src-name">Anthropic Engineering</span></div>
+    <h3 class="vtitle"><a href="/taste/files/anthropic_eng__how-we-contain-claude-across-products">我们如何在各产品线中隔离与约束 Claude</a></h3>
+    
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> Anthropic 复盘三款 agent 产品的隔离架构与三起事故——钓鱼 25 试 24 中、白名单被反用外传——结论：环境层确定性硬边界先行，模型层概率防御只是补充。</div>
+  <div class="feature-foot"><a class="orig" href="https://www.anthropic.com/engineering/how-we-contain-claude" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#Agent">Agent</a><a class="topic-pill" href="/taste/topics#%E5%AF%B9%E9%BD%90%E5%AE%89%E5%85%A8">对齐安全</a><a class="topic-pill" href="/taste/topics#%E5%9F%BA%E7%A1%80%E8%AE%BE%E6%96%BD">基础设施</a></div></div>
+</div></div></div>
+</div><div class="tl-day">
+  <div class="tl-date"><div class="d">06.03</div><div class="w">WED 周三</div><div class="rule"></div></div>
+  <div><div class="vgrid"><div class="vcard" data-card-href="/taste/files/claude_blog__running-an-ai-native-engineering-org">
+  <a class="plink" href="/taste/files/claude_blog__running-an-ai-native-engineering-org" aria-label="用 AI 原生方式运营一个工程组织"><div class="pwrap" aria-hidden="true"><div class="poster poster-geo" style="background:linear-gradient(165deg,#faf4ea 0%,#f0e4d2 70%,#e7d3ba 100%)"><div class="wm wm-caslon" style="color:#191510" aria-hidden="true">CLAUDE<span class="wm-sub" style="color:#191510">BLOG</span></div><div class="geo" style="width:58%"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="#cc785c" stroke-width="3" opacity=".55"/><g fill="#cc785c"><rect x="55" y="26" width="10" height="68" rx="5" transform="rotate(0 60 60)"/><rect x="55" y="26" width="10" height="68" rx="5" transform="rotate(60 60 60)"/><rect x="55" y="26" width="10" height="68" rx="5" transform="rotate(120 60 60)"/></g></svg></div><div class="label">Claude Blog</div><div class="compact-title" style="color:#191510">CLAUDE BLOG</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">ARTICLE</span><span class="src-name">Claude Blog</span></div>
+    <h3 class="vtitle"><a href="/taste/files/claude_blog__running-an-ai-native-engineering-org">用 AI 原生方式运营一个工程组织</a></h3>
+    
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> Anthropic Claude Code 工程负责人自述：当写代码不再是瓶颈、瓶颈转移到验证/评审/安全后，团队如何重写规划、上下文、评审、团队构成四类流程，并给出三个可落地的观测指标。</div>
+  <div class="feature-foot"><a class="orig" href="https://claude.com/blog/running-an-ai-native-engineering-org" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#claude%20code%20%E5%88%86%E6%9E%90">claude code 分析</a><a class="topic-pill" href="/taste/topics#%E6%96%B9%E6%B3%95%E8%AE%BA">方法论</a><a class="topic-pill" href="/taste/topics#AI%20Coding">AI Coding</a></div></div>
+</div></div></div>
+</div><div class="tl-day">
+  <div class="tl-date"><div class="d">06.02</div><div class="w">TUE 周二</div><div class="rule"></div></div>
+  <div><div class="vgrid"><div class="vcard" data-card-href="/taste/files/claude_blog__a-harness-for-every-task-dynamic-workflows-in-claude-code">
+  <a class="plink" href="/taste/files/claude_blog__a-harness-for-every-task-dynamic-workflows-in-claude-code" aria-label="为每个任务量身造 harness：Claude Code 的 dynamic workflows"><div class="pwrap" aria-hidden="true"><div class="poster poster-geo" style="background:linear-gradient(165deg,#faf4ea 0%,#f0e4d2 70%,#e7d3ba 100%)"><div class="wm wm-caslon" style="color:#191510" aria-hidden="true">CLAUDE<span class="wm-sub" style="color:#191510">BLOG</span></div><div class="geo" style="width:58%"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="#cc785c" stroke-width="3" opacity=".55"/><g fill="#cc785c"><rect x="55" y="26" width="10" height="68" rx="5" transform="rotate(0 60 60)"/><rect x="55" y="26" width="10" height="68" rx="5" transform="rotate(60 60 60)"/><rect x="55" y="26" width="10" height="68" rx="5" transform="rotate(120 60 60)"/></g></svg></div><div class="label">Claude Blog</div><div class="compact-title" style="color:#191510">CLAUDE BLOG</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">ARTICLE</span><span class="src-name">Claude Blog</span></div>
+    <h3 class="vtitle"><a href="/taste/files/claude_blog__a-harness-for-every-task-dynamic-workflows-in-claude-code">为每个任务量身造 harness：Claude Code 的 dynamic workflows</a></h3>
+    
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> Claude Code 的 dynamic workflows：现场写 harness 编排独立上下文的 subagent，用拆上下文治长任务的 laziness/自我偏好/goal drift 三失效，代价更费 token。</div>
+  <div class="feature-foot"><a class="orig" href="https://claude.com/blog/a-harness-for-every-task-dynamic-workflows-in-claude-code" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#claude%20code%20%E5%88%86%E6%9E%90">claude code 分析</a><a class="topic-pill" href="/taste/topics#AI%20Coding">AI Coding</a><a class="topic-pill" href="/taste/topics#Agent">Agent</a></div></div>
+</div></div></div>
+</div><div class="tl-day">
+  <div class="tl-date"><div class="d">06.01</div><div class="w">MON 周一</div><div class="rule"></div></div>
+  <div><div class="vgrid"><div class="vcard" data-card-href="/taste/files/scale_ai__fireside-chat-with-boris-cherny">
+  <a class="plink" href="/taste/files/scale_ai__fireside-chat-with-boris-cherny" aria-label="Boris Cherny 谈 Claude Code：coding 已解决，下一个瓶颈在哪"><div class="pwrap" aria-hidden="true"><div class="poster poster-geo" style="background:linear-gradient(160deg,#0b0b0d 0%,#1a1c22 60%,#2a2740 120%)"><div class="wm wm-sans" style="color:#f2f0ff" aria-hidden="true">SCALE</div><div class="geo" style="width:58%"><svg viewBox="0 0 120 120"><g stroke="#c9b8ff" stroke-width="4" fill="none" stroke-linecap="round" opacity=".88"><path d="M26 36 L60 20 L94 36 L94 76 L60 96 L26 76 Z"/><path d="M26 36 L60 58 L94 36 M60 58 L60 96 M26 76 L60 58 L94 76"/></g><g fill="#c9b8ff"><circle cx="26" cy="36" r="6"/><circle cx="60" cy="20" r="6"/><circle cx="94" cy="36" r="6"/><circle cx="94" cy="76" r="6"/><circle cx="60" cy="96" r="6"/><circle cx="26" cy="76" r="6"/><circle cx="60" cy="58" r="7"/></g></svg></div><div class="label">Scale AI</div><div class="compact-title" style="color:#f2f0ff">SCALE</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">VIDEO</span><span class="src-name">Scale AI</span></div>
+    <h3 class="vtitle"><a href="/taste/files/scale_ai__fireside-chat-with-boris-cherny">Boris Cherny 谈 Claude Code：coding 已解决，下一个瓶颈在哪</a></h3>
+    
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> Claude Code 负责人 Boris 2026-06 炉边谈：coding 已解决，瓶颈转向 review/security/CI 与 loops（agent 编排 agent）；ROI 主张全员发 token、用最贵模型只优化回报不砍成本。</div>
+  <div class="feature-foot"><a class="orig" href="https://www.youtube.com/watch?v=Z47vatpsGPI" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#claude%20code%20%E5%88%86%E6%9E%90">claude code 分析</a><a class="topic-pill" href="/taste/topics#AI%20Coding">AI Coding</a><a class="topic-pill" href="/taste/topics#Agent">Agent</a></div></div>
+</div></div></div>
+</div><div class="tl-day">
+  <div class="tl-date"><div class="d">05.28</div><div class="w">THU 周四</div><div class="rule"></div></div>
+  <div><div class="vgrid"><div class="vcard" data-card-href="/taste/files/claude_blog__introducing-dynamic-workflows-in-claude-code">
+  <a class="plink" href="/taste/files/claude_blog__introducing-dynamic-workflows-in-claude-code" aria-label="Claude Code 官宣 dynamic workflows"><div class="pwrap" aria-hidden="true"><div class="poster poster-geo" style="background:linear-gradient(165deg,#faf4ea 0%,#f0e4d2 70%,#e7d3ba 100%)"><div class="wm wm-caslon" style="color:#191510" aria-hidden="true">CLAUDE<span class="wm-sub" style="color:#191510">BLOG</span></div><div class="geo" style="width:58%"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="#cc785c" stroke-width="3" opacity=".55"/><g fill="#cc785c"><rect x="55" y="26" width="10" height="68" rx="5" transform="rotate(0 60 60)"/><rect x="55" y="26" width="10" height="68" rx="5" transform="rotate(60 60 60)"/><rect x="55" y="26" width="10" height="68" rx="5" transform="rotate(120 60 60)"/></g></svg></div><div class="label">Claude Blog</div><div class="compact-title" style="color:#191510">CLAUDE BLOG</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">ARTICLE</span><span class="src-name">Claude Blog</span></div>
+    <h3 class="vtitle"><a href="/taste/files/claude_blog__introducing-dynamic-workflows-in-claude-code">Claude Code 官宣 dynamic workflows</a></h3>
+    
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> Anthropic 官宣 Claude Code 的 dynamic workflows：Claude 自写编排脚本、单会话跑数十到数百并行 subagent，靠对抗验证迭代到收敛，把大工程压缩到几天，代价是 token 显著更高。</div>
+  <div class="feature-foot"><a class="orig" href="https://claude.com/blog/introducing-dynamic-workflows-in-claude-code" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#claude%20code%20%E5%88%86%E6%9E%90">claude code 分析</a><a class="topic-pill" href="/taste/topics#%E5%A4%9A%E6%99%BA%E8%83%BD%E4%BD%93">多智能体</a><a class="topic-pill" href="/taste/topics#AI%20Coding">AI Coding</a></div></div>
+</div></div></div>
+</div><div class="tl-day">
+  <div class="tl-date"><div class="d">05.26</div><div class="w">TUE 周二</div><div class="rule"></div></div>
+  <div><div class="vgrid"><div class="vcard" data-card-href="/taste/files/platformer__claude-code-s-creator-on-the-end-of-the-software-engineer">
+  <a class="plink" href="/taste/files/platformer__claude-code-s-creator-on-the-end-of-the-software-engineer" aria-label="Claude Code 之父谈软件工程师的终结"><div class="pwrap" aria-hidden="true"><div class="poster poster-geo" style="background:linear-gradient(155deg,#0a0a0c 0%,#161a24 60%,#243042 120%)"><div class="wm wm-sans" style="color:#eef3ff" aria-hidden="true">PLATFORMER</div><div class="geo" style="width:58%"><svg viewBox="0 0 120 120"><g fill="none" stroke="#7ef2c4" stroke-width="4"><circle cx="60" cy="60" r="45" opacity=".45"/><circle cx="60" cy="60" r="28" opacity=".65"/><circle cx="60" cy="60" r="11"/><path d="M60 60 L94 36"/></g><path d="M60 60 L92 40 A38 38 0 0 0 62 22 Z" fill="#7ef2c4" opacity=".22"/><circle cx="94" cy="36" r="6" fill="#7ef2c4"/></svg></div><div class="label">Platformer</div><div class="compact-title" style="color:#eef3ff">PLATFORMER</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">ARTICLE</span><span class="src-name">Platformer</span></div>
+    <h3 class="vtitle"><a href="/taste/files/platformer__claude-code-s-creator-on-the-end-of-the-software-engineer">Claude Code 之父谈软件工程师的终结</a></h3>
+    
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> Claude Code 负责人 Boris Cherny：「coding is solved」（限简单代码库），engineer 头衔将消融为「builder」，但写码/用 agent 的人会是今天 100 倍——岗位不是消失，是融合+放大。</div>
+  <div class="feature-foot"><a class="orig" href="https://www.platformer.news/boris-cherny-interview-ai-jobs/" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#claude%20code%20%E5%88%86%E6%9E%90">claude code 分析</a><a class="topic-pill" href="/taste/topics#AI%20Coding">AI Coding</a><a class="topic-pill" href="/taste/topics#%E8%A1%8C%E4%B8%9A%E5%8A%A8%E6%80%81">行业动态</a></div></div>
+</div></div></div>
+</div><div class="tl-day">
+  <div class="tl-date"><div class="d">05.25</div><div class="w">MON 周一</div><div class="rule"></div></div>
+  <div><div class="vgrid"><div class="vcard" data-card-href="/taste/files/how_i_ai__how-the-engineer-behind-claude-cowork-actually-uses-claude-f">
+  <a class="plink" href="/taste/files/how_i_ai__how-the-engineer-behind-claude-cowork-actually-uses-claude-f" aria-label="Claude Cowork 工程负责人的三个实操 demo 与「抽象阶梯」方法论"><div class="pwrap" aria-hidden="true"><div class="poster poster-geo" style="background:linear-gradient(155deg,#170a2a 0%,#331863 60%,#5b39c9 120%)"><div class="wm wm-sans" style="color:#efeaff" aria-hidden="true">HOW I AI</div><div class="geo" style="width:58%"><svg viewBox="0 0 120 120"><defs><linearGradient id="ghow_i_ai" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7ef2c4"/><stop offset="1" stop-color="#8a7bff"/></linearGradient></defs><circle cx="60" cy="60" r="46" fill="none" stroke="url(#ghow_i_ai)" stroke-width="7"/><path d="M50 40 L82 60 L50 80 Z" fill="#c6b3ff"/></svg></div><div class="label">How I AI · Claire Vo</div><div class="compact-title" style="color:#efeaff">HOW I AI</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">PODCAST</span><span class="src-name">How I AI · Claire Vo</span></div>
+    <h3 class="vtitle"><a href="/taste/files/how_i_ai__how-the-engineer-behind-claude-cowork-actually-uses-claude-f">Claude Cowork 工程负责人的三个实操 demo 与「抽象阶梯」方法论</a></h3>
+    
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> Anthropic 的 Felix Rieseberg 用三个 Claude Cowork demo（户型图转 3D 走位 / Live Artifact 仪表盘 / $20 硬件审批按钮）示范一条方法论：别自动化单步，往上爬一层抽象、把整个结果交给 Claude。</div>
+  <div class="feature-foot"><a class="orig" href="https://www.lennysnewsletter.com/p/how-i-ai-how-the-engineer-behind" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#claude%20code%20%E5%88%86%E6%9E%90">claude code 分析</a><a class="topic-pill" href="/taste/topics#%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7">效率工具</a><a class="topic-pill" href="/taste/topics#%E4%BA%A7%E5%93%81">产品</a></div></div>
+</div></div></div>
+</div><div class="tl-day">
+  <div class="tl-date"><div class="d">05.17</div><div class="w">SUN 周日</div><div class="rule"></div></div>
+  <div><div class="vgrid"><div class="vcard" data-card-href="/taste/files/creator_economy__inside-how-anthropic-is-building-the-next-claude-alex-albert">
+  <a class="plink" href="/taste/files/creator_economy__inside-how-anthropic-is-building-the-next-claude-alex-albert" aria-label="Anthropic 内部如何造下一代 Claude"><div class="pwrap" aria-hidden="true"><div class="poster poster-geo" style="background:linear-gradient(155deg,#1b0a24 0%,#3d1250 60%,#7a2ba0 120%)"><div class="wm wm-sans" style="color:#f6ecff" aria-hidden="true">CREATOR<span class="wm-sub" style="color:#f6ecff">ECONOMY</span></div><div class="geo" style="width:58%"><svg viewBox="0 0 120 120"><g fill="none" stroke="#e6b8ff" stroke-linecap="round"><circle cx="60" cy="60" r="30" stroke-width="6"/><ellipse cx="60" cy="60" rx="50" ry="18" transform="rotate(-18 60 60)" stroke-width="5" opacity=".75"/></g><circle cx="86" cy="41" r="7" fill="#e6b8ff"/><circle cx="34" cy="80" r="4" fill="#e6b8ff" opacity=".7"/></svg></div><div class="label">Creator Economy</div><div class="compact-title" style="color:#f6ecff">CREATOR ECONOMY</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">PODCAST</span><span class="src-name">Creator Economy</span></div>
+    <h3 class="vtitle"><a href="/taste/files/creator_economy__inside-how-anthropic-is-building-the-next-claude-alex-albert">Anthropic 内部如何造下一代 Claude</a></h3>
+    
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> Anthropic 研究 PM Alex Albert 讲内部如何造 Claude：把模型当产品，用「反馈→eval→干预→hill climb」闭环迭代，决策只押 one-way door，并把 character、memory 升为核心。</div>
+  <div class="feature-foot"><a class="orig" href="https://creatoreconomy.so/p/inside-how-anthropic-is-building-the-next-claude" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#claude%20code%20%E5%88%86%E6%9E%90">claude code 分析</a><a class="topic-pill" href="/taste/topics#%E4%BA%A7%E5%93%81">产品</a><a class="topic-pill" href="/taste/topics#%E6%96%B9%E6%B3%95%E8%AE%BA">方法论</a></div></div>
+</div></div></div>
+</div><div class="tl-day">
+  <div class="tl-date"><div class="d">05.15</div><div class="w">FRI 周五</div><div class="rule"></div></div>
+  <div><div class="vgrid"><div class="vcard" data-card-href="/taste/files/anthropic_eng__how-we-built-claude-code-auto-mode-a-safer-way-to-skip-permi">
+  <a class="plink" href="/taste/files/anthropic_eng__how-we-built-claude-code-auto-mode-a-safer-way-to-skip-permi" aria-label="Claude Code auto mode 是如何安全跳过权限的"><div class="pwrap" aria-hidden="true"><div class="poster poster-geo" style="background:linear-gradient(165deg,#f6efe4 0%,#ecdfc9 70%,#dfc9a8 100%)"><div class="wm wm-caslon" style="color:#1c150e" aria-hidden="true">ANTHROPIC<span class="wm-sub" style="color:#1c150e">ENGINEERING</span></div><div class="geo" style="width:58%"><svg viewBox="0 0 120 120"><g fill="#a84d2f" opacity=".95"><rect x="55" y="16" width="10" height="88" rx="5" transform="rotate(0 60 60)"/><rect x="55" y="16" width="10" height="88" rx="5" transform="rotate(45 60 60)"/><rect x="55" y="16" width="10" height="88" rx="5" transform="rotate(90 60 60)"/><rect x="55" y="16" width="10" height="88" rx="5" transform="rotate(135 60 60)"/></g></svg></div><div class="label">Engineering</div><div class="compact-title" style="color:#1c150e">ANTHROPIC ENGINEERING</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">ARTICLE</span><span class="src-name">Anthropic Engineering</span></div>
+    <h3 class="vtitle"><a href="/taste/files/anthropic_eng__how-we-built-claude-code-auto-mode-a-safer-way-to-skip-permi">Claude Code auto mode 是如何安全跳过权限的</a></h3>
+    
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> Anthropic auto mode 用双层模型分类器替代逐条审批：转录分类器只看动作、对 agent 推理盲，双阶段把 FPR 压到 0.4%，但真实越界动作仍漏 17%。</div>
+  <div class="feature-foot"><a class="orig" href="https://www.anthropic.com/engineering/claude-code-auto-mode" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#claude%20code%20%E5%88%86%E6%9E%90">claude code 分析</a><a class="topic-pill" href="/taste/topics#%E5%AF%B9%E9%BD%90%E5%AE%89%E5%85%A8">对齐安全</a><a class="topic-pill" href="/taste/topics#AI%20Coding">AI Coding</a></div></div>
+</div></div></div>
+</div><div class="tl-day">
+  <div class="tl-date"><div class="d">05.14</div><div class="w">THU 周四</div><div class="rule"></div></div>
+  <div><div class="vgrid"><div class="vcard" data-card-href="/taste/files/access_pod__what-anthropic-is-building-after-claude-code-mike-krieger">
+  <a class="plink" href="/taste/files/access_pod__what-anthropic-is-building-after-claude-code-mike-krieger" aria-label="Anthropic 在 Claude Code 之后要造什么（Mike Krieger 访谈）"><div class="pwrap" aria-hidden="true"><div class="poster poster-geo" style="background:linear-gradient(155deg,#071a1c 0%,#0f3b40 60%,#177078 120%)"><div class="wm wm-sans" style="color:#eafbf9" aria-hidden="true">ACCESS</div><div class="geo" style="width:58%"><svg viewBox="0 0 120 120"><defs><linearGradient id="gaccess_pod" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7ef2c4"/><stop offset="1" stop-color="#8a7bff"/></linearGradient></defs><circle cx="60" cy="60" r="46" fill="none" stroke="url(#gaccess_pod)" stroke-width="7"/><path d="M50 40 L82 60 L50 80 Z" fill="#8bf0e4"/></svg></div><div class="label">ACCESS · Alex Heath</div><div class="compact-title" style="color:#eafbf9">ACCESS</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">PODCAST</span><span class="src-name">ACCESS · Alex Heath</span></div>
+    <h3 class="vtitle"><a href="/taste/files/access_pod__what-anthropic-is-building-after-claude-code-mike-krieger">Anthropic 在 Claude Code 之后要造什么（Mike Krieger 访谈）</a></h3>
+    
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> Krieger 带 Anthropic Labs V2 找下一个 Claude Code；他承认 Claude AI/Cowork/Claude Code 三分是「需修的坏抽象」，Labs 交付 harness 策略而非产品，下一站押 health 与 MCP 分发。</div>
+  <div class="feature-foot"><a class="orig" href="https://podcasts.apple.com/ie/podcast/anthropics-hunt-for-the-next-claude-code/id1840154537?i=1000767752684" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#claude%20code%20%E5%88%86%E6%9E%90">claude code 分析</a><a class="topic-pill" href="/taste/topics#%E4%BA%A7%E5%93%81">产品</a><a class="topic-pill" href="/taste/topics#%E8%A1%8C%E4%B8%9A%E5%8A%A8%E6%80%81">行业动态</a></div></div>
+</div></div></div>
+</div><div class="tl-day">
+  <div class="tl-date"><div class="d">05.05</div><div class="w">TUE 周二</div><div class="rule"></div></div>
+  <div><div class="vgrid"><div class="vcard" data-card-href="/taste/files/sequoia_td__anthropic-s-boris-cherny-coding-s-printing-press-moment">
+  <a class="plink" href="/taste/files/sequoia_td__anthropic-s-boris-cherny-coding-s-printing-press-moment" aria-label="为什么说 coding 已被解决，以及接下来会发生什么"><div class="pwrap" aria-hidden="true"><div class="poster poster-geo" style="background:linear-gradient(160deg,#08160f 0%,#123024 60%,#1f5238 120%)"><div class="wm wm-serif" style="color:#eaf6ee" aria-hidden="true">SEQUOIA<span class="wm-sub" style="color:#eaf6ee">TRAINING DATA</span></div><div class="geo" style="width:58%"><svg viewBox="0 0 120 120"><path d="M88 22 C54 24 30 47 30 78 c0 16 12 24 27 19 c27-9 38-42 31-75z" fill="none" stroke="#8fe3b0" stroke-width="6" stroke-linejoin="round"/><path d="M32 94 C48 72 61 58 86 30" fill="none" stroke="#8fe3b0" stroke-width="5" stroke-linecap="round"/><path d="M52 70 C66 70 75 63 84 50" fill="none" stroke="#8fe3b0" stroke-width="4" stroke-linecap="round" opacity=".7"/></svg></div><div class="label">Sequoia · Training Data</div><div class="compact-title" style="color:#eaf6ee">SEQUOIA TRAINING DATA</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">PODCAST</span><span class="src-name">Sequoia · Training Data</span></div>
+    <h3 class="vtitle"><a href="/taste/files/sequoia_td__anthropic-s-boris-cherny-coding-s-printing-press-moment">为什么说 coding 已被解决，以及接下来会发生什么</a></h3>
+    
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> Boris Cherny 称 coding is solved（他本人 100% 由 Claude Code 写码），类比印刷术论证软件正被民主化：护城河从 switching cost/process power 转向 network effects/scale，机会属于 AI 原生初创。</div>
+  <div class="feature-foot"><a class="orig" href="https://www.youtube.com/watch?v=SlGRN8jh2RI" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#claude%20code%20%E5%88%86%E6%9E%90">claude code 分析</a><a class="topic-pill" href="/taste/topics#AI%20Coding">AI Coding</a><a class="topic-pill" href="/taste/topics#%E8%A1%8C%E4%B8%9A%E5%8A%A8%E6%80%81">行业动态</a></div></div>
+</div></div></div>
+</div><div class="tl-day">
+  <div class="tl-date"><div class="d">04.23</div><div class="w">THU 周四</div><div class="rule"></div></div>
+  <div><div class="vgrid"><div class="vcard" data-card-href="/taste/files/lennys__how-anthropic-s-product-team-moves-faster-than-anyone-cat-wu">
+  <a class="plink" href="/taste/files/lennys__how-anthropic-s-product-team-moves-faster-than-anyone-cat-wu" aria-label="Anthropic 产品团队为什么能一天出活（Cat Wu）"><div class="pwrap" aria-hidden="true"><div class="poster poster-face" style="background:radial-gradient(circle at 50% 36%,#f6cf9e 0%,#e0a468 45%,#bb6e34 100%)"><div class="wm wm-script" style="color:#171008" aria-hidden="true">Lenny&#x27;s<br>Newsletter</div><div class="face-wrap" style="width:56%"><img class="face" alt="" loading="lazy" src="/taste/assets/source-lennys.png" style="border:3px solid rgba(30,18,8,.3)" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="face ph" style="display:none;background:rgba(40,22,6,.25);border:3px solid rgba(30,18,8,.3);color:rgba(255,255,255,.92);font-size:12cqw">L</div></div><div class="label">Lenny Rachitsky</div><div class="compact-title" style="color:#171008">LENNY&#x27;S NEWSLETTER</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">PODCAST</span><span class="src-name">Lenny&#x27;s Podcast</span></div>
+    <h3 class="vtitle"><a href="/taste/files/lennys__how-anthropic-s-product-team-moves-faster-than-anyone-cat-wu">Anthropic 产品团队为什么能一天出活（Cat Wu）</a></h3>
+    
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> Claude Code 团队把 6 月路线图压成一天出活：research preview 降承诺、launch room 拉通、招有 product taste 的工程师；PM 价值收敛到 taste、eval 与摸清当前模型边界。</div>
+  <div class="feature-foot"><a class="orig" href="https://www.lennysnewsletter.com/p/how-anthropics-product-team-moves" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#claude%20code%20%E5%88%86%E6%9E%90">claude code 分析</a><a class="topic-pill" href="/taste/topics#%E4%BA%A7%E5%93%81">产品</a><a class="topic-pill" href="/taste/topics#%E6%96%B9%E6%B3%95%E8%AE%BA">方法论</a></div></div>
+</div></div></div>
+</div><div class="tl-day">
+  <div class="tl-date"><div class="d">04.17</div><div class="w">FRI 周五</div><div class="rule"></div></div>
+  <div><div class="vgrid"><div class="vcard" data-card-href="/taste/files/anthropic__claude-design-by-anthropic-labs">
+  <a class="plink" href="/taste/files/anthropic__claude-design-by-anthropic-labs" aria-label="Claude Design：Anthropic Labs 的对话式设计工具"><div class="pwrap" aria-hidden="true"><div class="poster poster-geo" style="background:linear-gradient(165deg,#faf6ef 0%,#f3e9dc 70%,#ecd9c4 100%)"><div class="wm wm-caslon" style="color:#191510" aria-hidden="true">ANTHROPIC</div><div class="geo" style="width:58%"><svg viewBox="0 0 120 120"><g fill="#cc785c"><rect x="54" y="14" width="12" height="92" rx="6" transform="rotate(0 60 60)"/><rect x="54" y="14" width="12" height="92" rx="6" transform="rotate(60 60 60)"/><rect x="54" y="14" width="12" height="92" rx="6" transform="rotate(120 60 60)"/></g></svg></div><div class="label">Anthropic News</div><div class="compact-title" style="color:#191510">ANTHROPIC</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">ARTICLE</span><span class="src-name">Anthropic News</span></div>
+    <h3 class="vtitle"><a href="/taste/files/anthropic__claude-design-by-anthropic-labs">Claude Design：Anthropic Labs 的对话式设计工具</a></h3>
+    
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> Anthropic Labs 推出 Claude Design：Opus 4.7 驱动的对话式设计工具，能读团队 codebase 自动套设计系统，并一键 handoff 给 Claude Code，是「Claude 走出代码」的孵化样本。</div>
+  <div class="feature-foot"><a class="orig" href="https://www.anthropic.com/news/claude-design-anthropic-labs" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#claude%20code%20%E5%88%86%E6%9E%90">claude code 分析</a><a class="topic-pill" href="/taste/topics#%E4%BA%A7%E5%93%81">产品</a><a class="topic-pill" href="/taste/topics#%E8%A1%8C%E4%B8%9A%E5%8A%A8%E6%80%81">行业动态</a></div></div>
+</div></div></div>
+</div><div class="tl-day">
+  <div class="tl-date"><div class="d">03.19</div><div class="w">THU 周四</div><div class="rule"></div></div>
+  <div><div class="vgrid"><div class="vcard" data-card-href="/taste/files/claude_blog__product-management-on-the-ai-exponential">
+  <a class="plink" href="/taste/files/claude_blog__product-management-on-the-ai-exponential" aria-label="AI 指数级时代的产品管理方法论"><div class="pwrap" aria-hidden="true"><div class="poster poster-geo" style="background:linear-gradient(165deg,#faf4ea 0%,#f0e4d2 70%,#e7d3ba 100%)"><div class="wm wm-caslon" style="color:#191510" aria-hidden="true">CLAUDE<span class="wm-sub" style="color:#191510">BLOG</span></div><div class="geo" style="width:58%"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="#cc785c" stroke-width="3" opacity=".55"/><g fill="#cc785c"><rect x="55" y="26" width="10" height="68" rx="5" transform="rotate(0 60 60)"/><rect x="55" y="26" width="10" height="68" rx="5" transform="rotate(60 60 60)"/><rect x="55" y="26" width="10" height="68" rx="5" transform="rotate(120 60 60)"/></g></svg></div><div class="label">Claude Blog</div><div class="compact-title" style="color:#191510">CLAUDE BLOG</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">ARTICLE</span><span class="src-name">Claude Blog</span></div>
+    <h3 class="vtitle"><a href="/taste/files/claude_blog__product-management-on-the-ai-exponential">AI 指数级时代的产品管理方法论</a></h3>
+    
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> Claude Code 产品负责人 Cat Wu：AI 指数级变强让传统 PM「锁定 roadmap 再执行」失效，改走 side quest 短冲刺、demo/eval 取代文档、新模型回炉旧功能、做最简单能work的事。</div>
+  <div class="feature-foot"><a class="orig" href="https://claude.com/blog/product-management-on-the-ai-exponential" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#claude%20code%20%E5%88%86%E6%9E%90">claude code 分析</a><a class="topic-pill" href="/taste/topics#%E4%BA%A7%E5%93%81">产品</a><a class="topic-pill" href="/taste/topics#%E6%96%B9%E6%B3%95%E8%AE%BA">方法论</a></div></div>
+</div></div></div>
+</div><div class="tl-day">
+  <div class="tl-date"><div class="d">03.17</div><div class="w">TUE 周二</div><div class="rule"></div></div>
+  <div><div class="vgrid"><div class="vcard" data-card-href="/taste/files/latent_space__felix-rieseberg-anthropic-cowork-and-giving-claude-its-own-c">
+  <a class="plink" href="/taste/files/latent_space__felix-rieseberg-anthropic-cowork-and-giving-claude-its-own-c" aria-label="为什么 AI 该有自己的电脑：Anthropic Cowork 拆解"><div class="pwrap" aria-hidden="true"><div class="poster poster-logo" style="background:linear-gradient(155deg,#06141f 0%,#123d52 58%,#19a6a3 115%)"><div class="wm wm-mono" style="color:#bffbf2" aria-hidden="true">LATENT<br>SPACE</div><div class="logo-wrap" style="width:52%"><div class="logo-box" style="border:3px solid rgba(191,251,242,.55);border-radius:22%;background:rgba(191,251,242,.16)"><img class="logo-img" alt="" loading="lazy" src="/taste/assets/source-latent-space.png" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="logo-ph" style="display:none;color:rgba(255,255,255,.92);font-size:16cqw">LS</div></div></div><div class="label">swyx &amp; Alessio</div><div class="compact-title" style="color:#bffbf2">LATENT SPACE</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">PODCAST</span><span class="src-name">Latent Space</span></div>
+    <h3 class="vtitle"><a href="/taste/files/latent_space__felix-rieseberg-anthropic-cowork-and-giving-claude-its-own-c">为什么 AI 该有自己的电脑：Anthropic Cowork 拆解</a></h3>
+    
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> Anthropic 的 Felix Rieseberg 讲 Claude Cowork：Claude Code 的「用户友好超集」，核心是给 Claude 一台自己的 VM 电脑——沙箱既是安全边界也是能力解锁，配合文件式 skills 与本地优先，把委托式自动化延伸到知识工作者。</div>
+  <div class="feature-foot"><a class="orig" href="https://www.latent.space/p/felix-anthropic" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#claude%20code%20%E5%88%86%E6%9E%90">claude code 分析</a><a class="topic-pill" href="/taste/topics#%E4%BA%A7%E5%93%81">产品</a><a class="topic-pill" href="/taste/topics#Agent">Agent</a></div></div>
+</div></div></div>
+</div><div class="tl-day">
+  <div class="tl-date"><div class="d">03.01</div><div class="w">SUN 周日</div><div class="rule"></div></div>
+  <div><div class="vgrid"><div class="vcard" data-card-href="/taste/files/pragmatic_engineer__building-claude-code-with-boris-cherny">
+  <a class="plink" href="/taste/files/pragmatic_engineer__building-claude-code-with-boris-cherny" aria-label="Boris Cherny 谈 Claude Code 的构建与工程师角色迁移"><div class="pwrap" aria-hidden="true"><div class="poster poster-geo" style="background:linear-gradient(160deg,#2a0a0a 0%,#6e1717 60%,#b83a2e 120%)"><div class="wm wm-mono" style="color:#ffe9e2" aria-hidden="true">PRAGMATIC<span class="wm-sub" style="color:#ffe9e2">ENGINEER</span></div><div class="geo" style="width:58%"><svg viewBox="0 0 120 120"><g fill="none" stroke="#ffd7c9" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M42 30 L24 50 L42 70"/><path d="M78 30 L96 50 L78 70"/><path d="M54 82 L66 38"/></g><g fill="#ffd7c9" opacity=".75"><rect x="24" y="86" width="16" height="8" rx="4"/><rect x="52" y="86" width="16" height="8" rx="4"/><rect x="80" y="86" width="16" height="8" rx="4"/></g></svg></div><div class="label">The Pragmatic Engineer</div><div class="compact-title" style="color:#ffe9e2">PRAGMATIC ENGINEER</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">ARTICLE</span><span class="src-name">The Pragmatic Engineer</span></div>
+    <h3 class="vtitle"><a href="/taste/files/pragmatic_engineer__building-claude-code-with-boris-cherny">Boris Cherny 谈 Claude Code 的构建与工程师角色迁移</a></h3>
+    
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> Claude Code 作者 Boris Cherny：5 个并行 Claude 每天出 20-30 个零手写 PR；agentic search 靠 glob+grep 胜 RAG；Anthropic 无 PRD、80% 代码由 Claude 写，并以印刷术类比工程师角色迁移。</div>
+  <div class="feature-foot"><a class="orig" href="https://newsletter.pragmaticengineer.com/p/building-claude-code-with-boris-cherny" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#claude%20code%20%E5%88%86%E6%9E%90">claude code 分析</a><a class="topic-pill" href="/taste/topics#AI%20Coding">AI Coding</a><a class="topic-pill" href="/taste/topics#%E6%96%B9%E6%B3%95%E8%AE%BA">方法论</a></div></div>
+</div></div></div>
+</div><div class="tl-day">
+  <div class="tl-date"><div class="d">02.19</div><div class="w">THU 周四</div><div class="rule"></div></div>
+  <div><div class="vgrid"><div class="vcard" data-card-href="/taste/files/lennys__head-of-claude-code-what-happens-after-coding-is-solved-bori">
+  <a class="plink" href="/taste/files/lennys__head-of-claude-code-what-happens-after-coding-is-solved-bori" aria-label="Claude Code 负责人：编码被解决之后"><div class="pwrap" aria-hidden="true"><div class="poster poster-face" style="background:radial-gradient(circle at 50% 36%,#f6cf9e 0%,#e0a468 45%,#bb6e34 100%)"><div class="wm wm-script" style="color:#171008" aria-hidden="true">Lenny&#x27;s<br>Newsletter</div><div class="face-wrap" style="width:56%"><img class="face" alt="" loading="lazy" src="/taste/assets/source-lennys.png" style="border:3px solid rgba(30,18,8,.3)" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="face ph" style="display:none;background:rgba(40,22,6,.25);border:3px solid rgba(30,18,8,.3);color:rgba(255,255,255,.92);font-size:12cqw">L</div></div><div class="label">Lenny Rachitsky</div><div class="compact-title" style="color:#171008">LENNY&#x27;S NEWSLETTER</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">PODCAST</span><span class="src-name">Lenny&#x27;s Podcast</span></div>
+    <h3 class="vtitle"><a href="/taste/files/lennys__head-of-claude-code-what-happens-after-coding-is-solved-bori">Claude Code 负责人：编码被解决之后</a></h3>
+    
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> Claude Code 负责人 Boris Cherny 复盘：一年占约 4% 公开 GitHub 提交、DAU 月翻倍，他本人 100% 代码由 AI 写；判定 coding is largely solved，下一站是非编程 agent（co-work），心法是「为半年后的模型造产品」。</div>
+  <div class="feature-foot"><a class="orig" href="https://www.lennysnewsletter.com/p/head-of-claude-code-what-happens" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#claude%20code%20%E5%88%86%E6%9E%90">claude code 分析</a><a class="topic-pill" href="/taste/topics#AI%20Coding">AI Coding</a><a class="topic-pill" href="/taste/topics#%E4%BA%A7%E5%93%81">产品</a></div></div>
+</div></div></div>
+</div><div class="tl-day">
+  <div class="tl-date"><div class="d">02.17</div><div class="w">TUE 周二</div><div class="rule"></div></div>
+  <div><div class="vgrid"><div class="vcard" data-card-href="/taste/files/yc_lightcone__inside-claude-code-with-its-creator-boris-cherny">
+  <a class="plink" href="/taste/files/yc_lightcone__inside-claude-code-with-its-creator-boris-cherny" aria-label="Claude Code 创造者 Boris Cherny 复盘：为 6 个月后的模型造"><div class="pwrap" aria-hidden="true"><div class="poster poster-geo" style="background:linear-gradient(160deg,#c2470a 0%,#9c3402 60%,#6e2200 120%)"><div class="wm wm-sans" style="color:#fff4ea" aria-hidden="true">Y COMBINATOR<span class="wm-sub" style="color:#fff4ea">LIGHTCONE</span></div><div class="geo" style="width:58%"><svg viewBox="0 0 120 120"><g fill="none" stroke="#fff4ea" stroke-width="5" stroke-linecap="round"><circle cx="60" cy="60" r="22"/><ellipse cx="60" cy="60" rx="48" ry="18" transform="rotate(32 60 60)"/><ellipse cx="60" cy="60" rx="48" ry="18" transform="rotate(-32 60 60)" opacity=".72"/></g><circle cx="91" cy="36" r="7" fill="#fff4ea"/></svg></div><div class="label">YC · Lightcone</div><div class="compact-title" style="color:#fff4ea">Y COMBINATOR LIGHTCONE</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">PODCAST</span><span class="src-name">Y Combinator · Lightcone</span></div>
+    <h3 class="vtitle"><a href="/taste/files/yc_lightcone__inside-claude-code-with-its-creator-boris-cherny">Claude Code 创造者 Boris Cherny 复盘：为 6 个月后的模型造</a></h3>
+    
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> Claude Code 创造者 Boris Cherny 复盘：它从终端玩具靠「为 6 个月后的模型造」+ latent demand 长成产品，如今 software engineer 头衔正被 builder 取代。</div>
+  <div class="feature-foot"><a class="orig" href="https://www.ycombinator.com/library/NJ-inside-claude-code-with-its-creator-boris-cherny" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#claude%20code%20%E5%88%86%E6%9E%90">claude code 分析</a><a class="topic-pill" href="/taste/topics#AI%20Coding">AI Coding</a><a class="topic-pill" href="/taste/topics#Agent">Agent</a></div></div>
+</div></div></div>
+</div><div class="tl-day">
+  <div class="tl-date"><div class="d">01.13</div><div class="w">TUE 周二</div><div class="rule"></div></div>
+  <div><div class="vgrid"><div class="vcard" data-card-href="/taste/files/anthropic__introducing-labs">
+  <a class="plink" href="/taste/files/anthropic__introducing-labs" aria-label="Anthropic 扩张 Labs：探索与规模化分家"><div class="pwrap" aria-hidden="true"><div class="poster poster-geo" style="background:linear-gradient(165deg,#faf6ef 0%,#f3e9dc 70%,#ecd9c4 100%)"><div class="wm wm-caslon" style="color:#191510" aria-hidden="true">ANTHROPIC</div><div class="geo" style="width:58%"><svg viewBox="0 0 120 120"><g fill="#cc785c"><rect x="54" y="14" width="12" height="92" rx="6" transform="rotate(0 60 60)"/><rect x="54" y="14" width="12" height="92" rx="6" transform="rotate(60 60 60)"/><rect x="54" y="14" width="12" height="92" rx="6" transform="rotate(120 60 60)"/></g></svg></div><div class="label">Anthropic News</div><div class="compact-title" style="color:#191510">ANTHROPIC</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">ARTICLE</span><span class="src-name">Anthropic News</span></div>
+    <h3 class="vtitle"><a href="/taste/files/anthropic__introducing-labs">Anthropic 扩张 Labs：探索与规模化分家</a></h3>
+    
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> Anthropic 扩张 Labs 专职孵化前沿实验产品：CPO Mike Krieger 转入 Labs 与 Ben Mann 共建，Ami Vora 接管 Product 做规模化——把「探索」与「规模化」拆成两条独立组织通道。</div>
+  <div class="feature-foot"><a class="orig" href="https://www.anthropic.com/news/introducing-anthropic-labs" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#claude%20code%20%E5%88%86%E6%9E%90">claude code 分析</a><a class="topic-pill" href="/taste/topics#%E4%BA%A7%E5%93%81">产品</a><a class="topic-pill" href="/taste/topics#%E8%A1%8C%E4%B8%9A%E5%8A%A8%E6%80%81">行业动态</a></div></div>
+</div></div></div>
+</div><div class="tl-day">
+  <div class="tl-date"><div class="d">01.01</div><div class="w">THU 周四</div><div class="rule"></div></div>
+  <div><div class="vgrid"><div class="vcard" data-card-href="/taste/files/youtube_anthropic__claude-agent-sdk-full-workshop">
+  <a class="plink" href="/taste/files/youtube_anthropic__claude-agent-sdk-full-workshop" aria-label="Claude Agent SDK 全程 Workshop 精读"><div class="pwrap" aria-hidden="true"><div class="poster poster-geo" style="background:linear-gradient(155deg,#1a0606 0%,#4a0d0d 55%,#c81f1f 120%)"><div class="wm wm-sans" style="color:#fff0f0" aria-hidden="true">YOUTUBE</div><div class="geo" style="width:58%"><svg viewBox="0 0 120 120"><defs><linearGradient id="gyoutube_anthropic" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7ef2c4"/><stop offset="1" stop-color="#8a7bff"/></linearGradient></defs><circle cx="60" cy="60" r="46" fill="none" stroke="url(#gyoutube_anthropic)" stroke-width="7"/><path d="M50 40 L82 60 L50 80 Z" fill="#ffdede"/></svg></div><div class="label">YouTube · Agent SDK</div><div class="compact-title" style="color:#fff0f0">YOUTUBE</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">VIDEO</span><span class="src-name">YouTube · Claude Agent SDK</span></div>
+    <h3 class="vtitle"><a href="/taste/files/youtube_anthropic__claude-agent-sdk-full-workshop">Claude Agent SDK 全程 Workshop 精读</a></h3>
+    
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> Claude Agent SDK 设计哲学：建在 Claude Code 之上，bash+文件系统是最强工具，agent loop 分「找上下文/动手/验证」三步，Pokémon 现场演示 codegen 胜过堆 tools。</div>
+  <div class="feature-foot"><a class="orig" href="https://www.youtube.com/watch?v=TqC1qOfiVcQ" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#claude%20code%20%E5%88%86%E6%9E%90">claude code 分析</a><a class="topic-pill" href="/taste/topics#Agent">Agent</a><a class="topic-pill" href="/taste/topics#%E4%B8%8A%E4%B8%8B%E6%96%87%E5%B7%A5%E7%A8%8B">上下文工程</a></div></div>
+</div><div class="vcard" data-card-href="/taste/files/anthropic_docs__claude-code-routines">
+  <a class="plink" href="/taste/files/anthropic_docs__claude-code-routines" aria-label="Claude Code Routines：给 CC 装上云端定时/事件触发"><div class="pwrap" aria-hidden="true"><div class="poster poster-geo" style="background:linear-gradient(165deg,#f4efe6 0%,#e8ddca 70%,#d8c6a6 100%)"><div class="wm wm-mono" style="color:#1c150e" aria-hidden="true">CLAUDE CODE<span class="wm-sub" style="color:#1c150e">DOCS</span></div><div class="geo" style="width:58%"><svg viewBox="0 0 120 120"><rect x="12" y="24" width="96" height="72" rx="10" fill="none" stroke="#a84d2f" stroke-width="4" opacity=".7"/><text x="30" y="74" font-family="monospace" font-size="34" font-weight="700" fill="#a84d2f">&gt;_</text></svg></div><div class="label">Claude Code Docs</div><div class="compact-title" style="color:#1c150e">CLAUDE CODE DOCS</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">ARTICLE</span><span class="src-name">Claude Code Docs</span></div>
+    <h3 class="vtitle"><a href="/taste/files/anthropic_docs__claude-code-routines">Claude Code Routines：给 CC 装上云端定时/事件触发</a></h3>
+    
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> Routines 把「prompt+仓库+connectors」打包成云端配置，由 schedule / API / GitHub 三种 trigger 触发，在 Anthropic 云上无审批全自主运行；research preview 阶段。</div>
+  <div class="feature-foot"><a class="orig" href="https://docs.anthropic.com/en/docs/claude-code/routines" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#claude%20code%20%E5%88%86%E6%9E%90">claude code 分析</a><a class="topic-pill" href="/taste/topics#AI%20Coding">AI Coding</a><a class="topic-pill" href="/taste/topics#Agent">Agent</a></div></div>
+</div><div class="vcard" data-card-href="/taste/files/ado_kukic__advent-of-claude-2025">
+  <a class="plink" href="/taste/files/ado_kukic__advent-of-claude-2025" aria-label="Advent of Claude：31 天 Claude Code 功能全景手册"><div class="pwrap" aria-hidden="true"><div class="poster poster-geo" style="background:linear-gradient(155deg,#071c18 0%,#0f3f36 60%,#1c7a63 120%)"><div class="wm wm-mono" style="color:#eafff8" aria-hidden="true">ADO KUKIC</div><div class="geo" style="width:58%"><svg viewBox="0 0 120 120"><g stroke="#8ff0d0" stroke-width="3" fill="none" opacity=".9"><path d="M20 90 L45 90 L60 60 L75 60 L90 30 M20 60 L40 60 M60 60 L60 92 M75 60 L96 78"/></g><g fill="#8ff0d0"><circle cx="20" cy="90" r="5"/><circle cx="20" cy="60" r="5"/><circle cx="90" cy="30" r="6"/><circle cx="60" cy="92" r="5"/><circle cx="96" cy="78" r="5"/><circle cx="60" cy="60" r="7"/></g></svg></div><div class="label">Ado Kukic</div><div class="compact-title" style="color:#eafff8">ADO KUKIC</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">ARTICLE</span><span class="src-name">Ado Kukic</span></div>
+    <h3 class="vtitle"><a href="/taste/files/ado_kukic__advent-of-claude-2025">Advent of Claude：31 天 Claude Code 功能全景手册</a></h3>
+    
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> Anthropic DevRel 的 31 天 Advent 手册，按九大主题串起 30+ 个 Claude Code 功能（上手/快捷键/会话/思考/权限/Agent 扩展），主线是「人给 AI 定边界」而非放手全干。</div>
+  <div class="feature-foot"><a class="orig" href="https://adocomplete.com/advent-of-claude-2025/" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#claude%20code%20%E5%88%86%E6%9E%90">claude code 分析</a><a class="topic-pill" href="/taste/topics#AI%20Coding">AI Coding</a><a class="topic-pill" href="/taste/topics#%E6%95%88%E7%8E%87%E5%B7%A5%E5%85%B7">效率工具</a></div></div>
+</div><div class="vcard" data-card-href="/taste/files/gitnation__agentic-by-default-rethinking-developer-workflows-with-claud">
+  <a class="plink" href="/taste/files/gitnation__agentic-by-default-rethinking-developer-workflows-with-claud" aria-label="Agentic by Default：重新设计 Claude Code 开发工作流"><div class="pwrap" aria-hidden="true"><div class="poster poster-geo" style="background:linear-gradient(155deg,#04121f 0%,#0a2f4a 60%,#125e6e 120%)"><div class="wm wm-mono" style="color:#e8fbff" aria-hidden="true">GITNATION</div><div class="geo" style="width:58%"><svg viewBox="0 0 120 120"><g fill="none" stroke="#79e0d6" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M42 30 L24 50 L42 70"/><path d="M78 30 L96 50 L78 70"/><path d="M54 82 L66 38"/></g><g fill="#79e0d6" opacity=".75"><rect x="24" y="86" width="16" height="8" rx="4"/><rect x="52" y="86" width="16" height="8" rx="4"/><rect x="80" y="86" width="16" height="8" rx="4"/></g></svg></div><div class="label">GitNation</div><div class="compact-title" style="color:#e8fbff">GITNATION</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">VIDEO</span><span class="src-name">GitNation · AI Coding Summit</span></div>
+    <h3 class="vtitle"><a href="/taste/files/gitnation__agentic-by-default-rethinking-developer-workflows-with-claud">Agentic by Default：重新设计 Claude Code 开发工作流</a></h3>
+    
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> Anthropic DevRel 讲座：agentic coding 内核是 plan-act-verify 循环，Claude Code 用 CLAUDE.md、plan mode、subagents、hooks、MCP、Skills、plugins、WorkTrees 等九个 pattern 落地，甜蜜点押在 guided autonomy。</div>
+  <div class="feature-foot"><a class="orig" href="https://gitnation.com/contents/agentic-by-default-rethinking-developer-workflows-with-claude-code" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#claude%20code%20%E5%88%86%E6%9E%90">claude code 分析</a><a class="topic-pill" href="/taste/topics#AI%20Coding">AI Coding</a><a class="topic-pill" href="/taste/topics#%E6%96%B9%E6%B3%95%E8%AE%BA">方法论</a></div></div>
+</div></div></div>
+</div><div class="tl-day">
+  <div class="tl-date"><div class="d">12.24</div><div class="w">WED 周三</div><div class="rule"></div></div>
+  <div><div class="vgrid"><div class="vcard" data-card-href="/taste/files/ai_daily_brief__how-ai-starts-doing-the-work-in-2026-mike-krieger">
+  <a class="plink" href="/taste/files/ai_daily_brief__how-ai-starts-doing-the-work-in-2026-mike-krieger" aria-label="Mike Krieger 谈 2026：AI 从工具变成接活的同事"><div class="pwrap" aria-hidden="true"><div class="poster poster-geo" style="background:linear-gradient(155deg,#0a0c1e 0%,#181c48 60%,#2b34a0 120%)"><div class="wm wm-mono" style="color:#eaf0ff" aria-hidden="true">AI DAILY<span class="wm-sub" style="color:#eaf0ff">BRIEF</span></div><div class="geo" style="width:58%"><svg viewBox="0 0 120 120"><g fill="none" stroke="#a9b6ff" stroke-width="4"><circle cx="60" cy="60" r="45" opacity=".45"/><circle cx="60" cy="60" r="28" opacity=".65"/><circle cx="60" cy="60" r="11"/><path d="M60 60 L94 36"/></g><path d="M60 60 L92 40 A38 38 0 0 0 62 22 Z" fill="#a9b6ff" opacity=".22"/><circle cx="94" cy="36" r="6" fill="#a9b6ff"/></svg></div><div class="label">The AI Daily Brief</div><div class="compact-title" style="color:#eaf0ff">AI DAILY BRIEF</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">PODCAST</span><span class="src-name">The AI Daily Brief</span></div>
+    <h3 class="vtitle"><a href="/taste/files/ai_daily_brief__how-ai-starts-doing-the-work-in-2026-mike-krieger">Mike Krieger 谈 2026：AI 从工具变成接活的同事</a></h3>
+    
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> Anthropic CPO Mike Krieger 谈 2026：coding agent 从 copilot 转为「tag 它去喝咖啡、回来活干完了」的接活模式，企业从撒 chatbot 转向部署接管流程的 horizontal agents；产品要「ride the exponential」，为尚不存在的能力设计、模型变强就删 harness。</div>
+  <div class="feature-foot"><a class="orig" href="https://www.youtube.com/watch?v=VSLEGpCemtE" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#claude%20code%20%E5%88%86%E6%9E%90">claude code 分析</a><a class="topic-pill" href="/taste/topics#%E8%A1%8C%E4%B8%9A%E5%8A%A8%E6%80%81">行业动态</a><a class="topic-pill" href="/taste/topics#Agent">Agent</a></div></div>
+</div></div></div>
+</div><div class="tl-day">
+  <div class="tl-date"><div class="d">10.29</div><div class="w">WED 周三</div><div class="rule"></div></div>
+  <div><div class="vgrid"><div class="vcard" data-card-href="/taste/files/every__how-to-use-claude-code-like-the-people-who-built-it">
+  <a class="plink" href="/taste/files/every__how-to-use-claude-code-like-the-people-who-built-it" aria-label="像造它的人一样用 Claude Code"><div class="pwrap" aria-hidden="true"><div class="poster poster-geo" style="background:linear-gradient(165deg,#faf9f6 0%,#efece5 70%,#e2ddd2 100%)"><div class="wm wm-serif" style="color:#17140f" aria-hidden="true">EVERY</div><div class="geo" style="width:36%"><svg viewBox="0 0 100 100"><rect x="8" y="8" width="84" height="84" rx="10" fill="#b5642e"/><text x="50" y="44" text-anchor="middle" font-family="Songti SC,STSong,serif" font-weight="900" font-size="30" fill="#f7f3ea">印</text><text x="50" y="80" text-anchor="middle" font-family="Songti SC,STSong,serif" font-weight="900" font-size="30" fill="#f7f3ea">印</text></svg></div><div class="label">Every · AI &amp; I</div><div class="compact-title" style="color:#17140f">EVERY</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">PODCAST</span><span class="src-name">Every · AI &amp; I</span></div>
+    <h3 class="vtitle"><a href="/taste/files/every__how-to-use-claude-code-like-the-people-who-built-it">像造它的人一样用 Claude Code</a></h3>
+    
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> Claude Code 创造者 Boris Cherny 与 Cat Wu 讲「终端 + bash」范式的由来与用法：plan mode、subagent、hooks 是拉开成功率的真正杠杆，而 harness 会被更强模型不断吞掉。</div>
+  <div class="feature-foot"><a class="orig" href="https://every.to/podcast/how-to-use-claude-code-like-the-people-who-built-it" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#claude%20code%20%E5%88%86%E6%9E%90">claude code 分析</a><a class="topic-pill" href="/taste/topics#AI%20Coding">AI Coding</a><a class="topic-pill" href="/taste/topics#%E6%96%B9%E6%B3%95%E8%AE%BA">方法论</a></div></div>
+</div></div></div>
+</div><div class="tl-day">
+  <div class="tl-date"><div class="d">10.20</div><div class="w">MON 周一</div><div class="rule"></div></div>
+  <div><div class="vgrid"><div class="vcard" data-card-href="/taste/files/claude_blog__claude-code-on-the-web">
+  <a class="plink" href="/taste/files/claude_blog__claude-code-on-the-web" aria-label="Claude Code on the web：把编码任务派到云端并行跑"><div class="pwrap" aria-hidden="true"><div class="poster poster-geo" style="background:linear-gradient(165deg,#faf4ea 0%,#f0e4d2 70%,#e7d3ba 100%)"><div class="wm wm-caslon" style="color:#191510" aria-hidden="true">CLAUDE<span class="wm-sub" style="color:#191510">BLOG</span></div><div class="geo" style="width:58%"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="#cc785c" stroke-width="3" opacity=".55"/><g fill="#cc785c"><rect x="55" y="26" width="10" height="68" rx="5" transform="rotate(0 60 60)"/><rect x="55" y="26" width="10" height="68" rx="5" transform="rotate(60 60 60)"/><rect x="55" y="26" width="10" height="68" rx="5" transform="rotate(120 60 60)"/></g></svg></div><div class="label">Claude Blog</div><div class="compact-title" style="color:#191510">CLAUDE BLOG</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">ARTICLE</span><span class="src-name">Claude Blog</span></div>
+    <h3 class="vtitle"><a href="/taste/files/claude_blog__claude-code-on-the-web">Claude Code on the web：把编码任务派到云端并行跑</a></h3>
+    
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> Claude Code on the web（preview，Pro/Max）：浏览器把编码任务派给托管云跑，跨仓库并行、自动开 PR，会话隔离在 sandbox 内、Git 走安全代理，同上线 iOS。</div>
+  <div class="feature-foot"><a class="orig" href="https://claude.com/blog/claude-code-on-the-web" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#claude%20code%20%E5%88%86%E6%9E%90">claude code 分析</a><a class="topic-pill" href="/taste/topics#AI%20Coding">AI Coding</a><a class="topic-pill" href="/taste/topics#%E5%9F%BA%E7%A1%80%E8%AE%BE%E6%96%BD">基础设施</a></div></div>
+</div></div></div>
+</div><div class="tl-day">
+  <div class="tl-date"><div class="d">09.29</div><div class="w">MON 周一</div><div class="rule"></div></div>
+  <div><div class="vgrid"><div class="vcard" data-card-href="/taste/files/claude_blog__building-agents-with-the-claude-agent-sdk">
+  <a class="plink" href="/taste/files/claude_blog__building-agents-with-the-claude-agent-sdk" aria-label="用 Claude Agent SDK 搭 agent：给 Claude 一台电脑"><div class="pwrap" aria-hidden="true"><div class="poster poster-geo" style="background:linear-gradient(165deg,#faf4ea 0%,#f0e4d2 70%,#e7d3ba 100%)"><div class="wm wm-caslon" style="color:#191510" aria-hidden="true">CLAUDE<span class="wm-sub" style="color:#191510">BLOG</span></div><div class="geo" style="width:58%"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="#cc785c" stroke-width="3" opacity=".55"/><g fill="#cc785c"><rect x="55" y="26" width="10" height="68" rx="5" transform="rotate(0 60 60)"/><rect x="55" y="26" width="10" height="68" rx="5" transform="rotate(60 60 60)"/><rect x="55" y="26" width="10" height="68" rx="5" transform="rotate(120 60 60)"/></g></svg></div><div class="label">Claude Blog</div><div class="compact-title" style="color:#191510">CLAUDE BLOG</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">ARTICLE</span><span class="src-name">Claude Blog</span></div>
+    <h3 class="vtitle"><a href="/taste/files/claude_blog__building-agents-with-the-claude-agent-sdk">用 Claude Agent SDK 搭 agent：给 Claude 一台电脑</a></h3>
+    
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> Claude Code SDK 更名 Claude Agent SDK，主张「给 Claude 一台电脑」：靠文件系统+bash+子代理+MCP，让通用 agent 在「收集上下文→行动→验证」循环里干活。</div>
+  <div class="feature-foot"><a class="orig" href="https://claude.com/blog/building-agents-with-the-claude-agent-sdk" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#claude%20code%20%E5%88%86%E6%9E%90">claude code 分析</a><a class="topic-pill" href="/taste/topics#Agent">Agent</a><a class="topic-pill" href="/taste/topics#%E6%96%B9%E6%B3%95%E8%AE%BA">方法论</a></div></div>
+</div></div></div>
+</div><div class="tl-day">
+  <div class="tl-date"><div class="d">07.20</div><div class="w">SUN 周日</div><div class="rule"></div></div>
+  <div><div class="vgrid"><div class="vcard" data-card-href="/taste/files/lennys__anthropic-co-founder-ben-mann-agi-predictions-leaving-openai">
+  <a class="plink" href="/taste/files/lennys__anthropic-co-founder-ben-mann-agi-predictions-leaving-openai" aria-label="Anthropic 联创 Ben Mann：AGI 时间线、离开 OpenAI、对齐安全"><div class="pwrap" aria-hidden="true"><div class="poster poster-face" style="background:radial-gradient(circle at 50% 36%,#f6cf9e 0%,#e0a468 45%,#bb6e34 100%)"><div class="wm wm-script" style="color:#171008" aria-hidden="true">Lenny&#x27;s<br>Newsletter</div><div class="face-wrap" style="width:56%"><img class="face" alt="" loading="lazy" src="/taste/assets/source-lennys.png" style="border:3px solid rgba(30,18,8,.3)" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="face ph" style="display:none;background:rgba(40,22,6,.25);border:3px solid rgba(30,18,8,.3);color:rgba(255,255,255,.92);font-size:12cqw">L</div></div><div class="label">Lenny Rachitsky</div><div class="compact-title" style="color:#171008">LENNY&#x27;S NEWSLETTER</div></div></div></a>
+  <div class="vbody">
+    <div class="src-line"><span class="chip solid">PODCAST</span><span class="src-name">Lenny&#x27;s Podcast</span></div>
+    <h3 class="vtitle"><a href="/taste/files/lennys__anthropic-co-founder-ben-mann-agi-predictions-leaving-openai">Anthropic 联创 Ben Mann：AGI 时间线、离开 OpenAI、对齐安全</a></h3>
+    
+  </div>
+  <div class="tldr"><b>AI 摘要 ·</b> Anthropic 联创 Ben Mann：超级智能 50 分位约 2028 年到来，scaling law 未停反在加速；离开 OpenAI 是因为安全没被排在第一；X-risk 概率 0-10% 但边际上几乎无人在管，值得押注。</div>
+  <div class="feature-foot"><a class="orig" href="https://www.lennysnewsletter.com/p/anthropic-co-founder-benjamin-mann" target="_blank" rel="noopener">原文 ↗</a><div class="topics-row"><a class="topic-pill" href="/taste/topics#claude%20code%20%E5%88%86%E6%9E%90">claude code 分析</a><a class="topic-pill" href="/taste/topics#%E8%A1%8C%E4%B8%9A%E5%8A%A8%E6%80%81">行业动态</a><a class="topic-pill" href="/taste/topics#%E5%AF%B9%E9%BD%90%E5%AE%89%E5%85%A8">对齐安全</a></div></div>
+</div></div></div>
+</div></main>
+<footer><div class="fleuron">❦</div>curated by Yijun · one pick a day</footer>
+</div><script>
+document.querySelectorAll('[data-card-href]').forEach(card=>{
+  card.addEventListener('click',ev=>{
+    if(ev.target.closest('a,button,input,textarea,select,label')) return;
+    const href=card.dataset.cardHref;
+    if(!href) return;
+    if(card.dataset.cardTarget==='_blank') window.open(href,'_blank','noopener');
+    else window.location.href=href;
+  });
+});
+</script>
+</body>
+</html>
